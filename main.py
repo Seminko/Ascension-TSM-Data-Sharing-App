@@ -207,7 +207,7 @@ while True:
             "WE WILL NEED ONE DB TABLE FOR EACH REALM, for now Area52 only"
             area_52_only_import_data = next(r for r in realms_to_be_pushed if r["realm"] == 'Area 52 - Free-Pick')
             
-            data_to_send = {"scan_data": area_52_only_import_data["scan_data"], "username": area_52_only_import_data["username"]} # <--------- PLACEHOLDER HERE
+            data_to_send = {"scan_data": area_52_only_import_data["scan_data"], "username": area_52_only_import_data["username"]}
             import_result = send_data_to_server(data_to_send)
             logger.info("  " + import_result['message'])
             
