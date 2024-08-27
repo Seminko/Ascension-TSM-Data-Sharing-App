@@ -51,17 +51,13 @@ def interruptible_sleep(seconds):
         time.sleep(0.1)  # Sleep in smaller increments
         
 def parse_arguments():
-    # Initialize the parser
     parser = argparse.ArgumentParser(description="A script with a debug option.")
-
-    # Add the --debug flag
     parser.add_argument(
         "--debug",
         action="store_true",  # This means the flag is optional and sets debug to True if present
         help="Enable debug mode"
     )
 
-    # Parse the arguments and return them
     return parser.parse_args()
         
 def get_logger(debug):
@@ -107,6 +103,8 @@ def get_latest_scans_across_all_accounts_and_realms(file_info):
 def initiliaze_json():
     logger.info(f"Initializing '{JSON_FILE_NAME}'")
     wtf_folder = get_wtf_folder()
+    if not wtf_folder:
+        raise ValueError("WTF folder cannot be found.")
     lua_file_paths = get_tsm_auctiondb_lua_files(wtf_folder)
     file_info = get_lua_file_path_info(lua_file_paths)
     latest_data = get_latest_scans_across_all_accounts_and_realms(file_info)

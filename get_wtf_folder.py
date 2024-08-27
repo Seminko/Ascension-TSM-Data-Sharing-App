@@ -1,20 +1,6 @@
 import os
 import platform
 
-def find_wtf_folder(starting_paths, target_folder_name="WTF"):
-    """
-    Search for the WTF folder within the specified starting paths.
-
-    :param starting_paths: List of paths where the search should begin.
-    :param target_folder_name: The name of the folder to search for.
-    :return: The full path to the WTF folder if found, otherwise None.
-    """
-    for starting_path in starting_paths:
-        for root, dirs, files in os.walk(starting_path):
-            if target_folder_name in dirs:
-                return os.path.join(root, target_folder_name)
-    return None
-
 def get_possible_paths():
     """
     Get a list of possible paths where Ascension WoW might be installed based on the OS.
@@ -32,7 +18,7 @@ def get_possible_paths():
             possible_paths.append(os.path.join(drive, "Program Files (x86)", "Ascension Launcher", "resources", "client"))
             possible_paths.append(os.path.join(drive, "Games", "Ascension Launcher", "resources", "client"))
             possible_paths.append(os.path.join(drive, "Ascension Launcher", "resources", "client"))
-
+    # LINUX IS UNTESTED
     elif os_type == "Linux":
         home_dir = os.path.expanduser("~")
         # Add default known locations
@@ -43,6 +29,20 @@ def get_possible_paths():
         possible_paths.append(os.path.join("/", "usr", "local", "Ascension Launcher", "resources", "client"))
 
     return possible_paths
+
+def find_wtf_folder(starting_paths, target_folder_name="WTF"):
+    """
+    Search for the WTF folder within the specified starting paths.
+
+    :param starting_paths: List of paths where the search should begin.
+    :param target_folder_name: The name of the folder to search for.
+    :return: The full path to the WTF folder if found, otherwise None.
+    """
+    for starting_path in starting_paths:
+        for root, dirs, files in os.walk(starting_path):
+            if target_folder_name in dirs:
+                return os.path.join(root, target_folder_name)
+    return None
 
 def get_wtf_folder():
     """
