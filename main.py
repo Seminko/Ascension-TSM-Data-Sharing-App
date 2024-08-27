@@ -13,25 +13,6 @@ JSON_FILE_NAME = "update_times.json"
 DETECT_CHANGES_INTERVAL_SECONDS = 300
 
 
-"""
-- kontrola updatů filů
-    - kdyby to nebylo uploadoval bych možná staré fily
-    - musím uploadovat jen fily, které ještě nebyly pushed
-- pokud se změní, uploadne se JEN scanData
-- budu uploadovat jen ty scan data, které jsou nejnovější pro každý realm across all files
-- musím vědět:
-    - jaký file se změnil
-    - jaký realm ve filu se změnil
-    - ty data uploadnu
-- na serveru musím přechroupat poslané data per item, vybrat ty nejnovější scany, a vlastně postavit nové scanData
-    - tzn na serveru bude jeden true file PER REALM
-    - pokud se pošle update, porovnají se hodnoty 'lastScan' pro každý item a pokud item v poslaném filu bude novější, přepíše se do true filu
-"""
-
-# def interruptible_sleep(seconds):
-#     for _ in range(seconds*100):
-#         time.sleep(0.01)
-
 def send_data_to_server(scan_data):
     """
     DO SOME RETRIES IN CASE THE SERVER BECOME A POTATO TERMPORARILLY
