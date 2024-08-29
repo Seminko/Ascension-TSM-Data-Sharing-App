@@ -3,25 +3,43 @@ from datetime import datetime
 import os
 import luadata
 import json
+from json.decoder import JSONDecodeError
 import time
 import logging
 import argparse
 import requests
 import re
 
+
 JSON_FILE_NAME = "update_times.json"
 DETECT_CHANGES_INTERVAL_SECONDS = 300
 
 
-def send_data_to_server(scan_data):
-    """
-    DO SOME RETRIES IN CASE THE SERVER BECOME A POTATO TERMPORARILLY
-    """
+"do some testing on this..."
+def send_data_to_server(data_to_send):
     url =***REMOVED***
-    response = requests.post(url, json=scan_data)
-    if response.status_code != 200:
-        raise ValueError(f"Sending to db failed: '{response.json()}'")
-    return response.json()
+    cap = 5
+    expn = None
+    for rnd in range(1, cap+1):
+        try:
+            response = requests.post(url, json=data_to_send)
+        except Exception as e:
+            expn = e
+            logger.debug(f"Sending to db failed: {str(repr(e))}")
+            continue
+        
+        if response.status_code != 200:
+            try:
+                response_json = response.json()
+            except (JSONDecodeError, ValueError):
+                response_json = {"response text": re.sub("\n", " ", re.sub('<[^<]+?>', '', response.text)).strip()}
+            logger.debug(f"Sending to db failed: {response_json}")
+            continue
+        
+        return response.json()
+    if expn:
+        raise expn
+    raise Exception(f"Sending to db failed: {response_json}")
 
         
 def interruptible_sleep(seconds):
@@ -48,7 +66,7 @@ def get_logger(debug):
     
     # Console handler with INFO level
     console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)  # Console logs only INFO and above
+    console_handler.setLevel(logging.DEBUG)  # Console logs only INFO and above
     console_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     console_handler.setFormatter(console_formatter)
     logger.addHandler(console_handler)
