@@ -32,7 +32,7 @@ def send_data_to_server(data_to_send):
             try:
                 response_json = response.json()
             except (JSONDecodeError, ValueError):
-                response_json = {"response text": re.sub("\n", " ", re.sub('<[^<]+?>', '', response.text)).strip()}
+                response_json = {"response text": re.sub("(?:\n+|\s\s+)", " ", re.sub('<[^<]+?>', '', response.text)).strip()}
             logger.debug(f"Sending to db failed: {response_json}")
             continue
         
