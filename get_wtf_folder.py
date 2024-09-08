@@ -1,5 +1,6 @@
-import os
-import platform
+from os import path as os_path, walk as os_walk
+from platform import system
+from select_dir import select_folder
 
 def get_possible_paths():
     """
@@ -7,26 +8,28 @@ def get_possible_paths():
 
     :return: A list of paths to search.
     """
-    os_type = platform.system()
+    os_type = system()
     possible_paths = []
 
-    if os_type == "Windows":
-        drives = [f"{chr(x)}:\\" for x in range(65, 91) if os.path.exists(f"{chr(x)}:\\")]
-        for drive in drives:
-            # Add default known locations
-            possible_paths.append(os.path.join(drive, "Program Files", "Ascension Launcher", "resources", "client"))
-            possible_paths.append(os.path.join(drive, "Program Files (x86)", "Ascension Launcher", "resources", "client"))
-            possible_paths.append(os.path.join(drive, "Games", "Ascension Launcher", "resources", "client"))
-            possible_paths.append(os.path.join(drive, "Ascension Launcher", "resources", "client"))
-    # LINUX IS UNTESTED
-    elif os_type == "Linux":
-        home_dir = os.path.expanduser("~")
+    if os_type != "Windows":
+        raise Exception("The app is only available for Windows")
+
+    drives = [f"{chr(x)}:\\" for x in range(65, 91) if os_path.exists(f"{chr(x)}:\\")]
+    for drive in drives:
         # Add default known locations
-        possible_paths.append(os.path.join(home_dir, ".ascension", "client"))
-        possible_paths.append(os.path.join(home_dir, "Games", "Ascension Launcher", "resources", "client"))
-        possible_paths.append(os.path.join(home_dir, "Ascension", "resources", "client"))
-        possible_paths.append(os.path.join("/", "opt", "Ascension Launcher", "resources", "client"))
-        possible_paths.append(os.path.join("/", "usr", "local", "Ascension Launcher", "resources", "client"))
+        possible_paths.append(os_path.join(drive, "Program Files", "Ascension Launcher", "resources", "client"))
+        possible_paths.append(os_path.join(drive, "Program Files (x86)", "Ascension Launcher", "resources", "client"))
+        possible_paths.append(os_path.join(drive, "Games", "Ascension Launcher", "resources", "client"))
+        possible_paths.append(os_path.join(drive, "Ascension Launcher", "resources", "client"))
+    # # LINUX IS UNTESTED
+    # elif os_type == "Linux":
+    #     home_dir = os_path.expanduser("~")
+    #     # Add default known locations
+    #     possible_paths.append(os_path.join(home_dir, ".ascension", "client"))
+    #     possible_paths.append(os_path.join(home_dir, "Games", "Ascension Launcher", "resources", "client"))
+    #     possible_paths.append(os_path.join(home_dir, "Ascension", "resources", "client"))
+    #     possible_paths.append(os_path.join("/", "opt", "Ascension Launcher", "resources", "client"))
+    #     possible_paths.append(os_path.join("/", "usr", "local", "Ascension Launcher", "resources", "client"))
 
     return possible_paths
 
@@ -39,9 +42,10 @@ def find_wtf_folder(starting_paths, target_folder_name="WTF"):
     :return: The full path to the WTF folder if found, otherwise None.
     """
     for starting_path in starting_paths:
-        for root, dirs, files in os.walk(starting_path):
+        for root, dirs, files in os_walk(starting_path):
             if target_folder_name in dirs:
-                return os.path.join(root, target_folder_name)
+                return os_path.join(root, target_folder_name)
+
     return None
 
 def get_wtf_folder():
@@ -56,8 +60,12 @@ def get_wtf_folder():
 
     if wtf_folder:
         return wtf_folder
-    else:
-        return ""
+    
+    folder_selected_path = select_folder()
+    if not folder_selected_path.endswith(r"/client/WTF"):
+        raise ValueError("Selected wrong folder. You must select the 'WTF' folder in Ascension directory.")
+        
+    return folder_selected_path
 
 
 # get_wtf_folder()
