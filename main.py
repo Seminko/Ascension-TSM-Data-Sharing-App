@@ -1,4 +1,6 @@
 from get_wtf_folder import get_wtf_folder
+from save_shortcut import create_shortcut_to_startup
+
 from datetime import datetime
 from os import path as os_path, listdir as os_listdir
 from luadata import unserialize as luadata_unserialize
@@ -10,7 +12,6 @@ import argparse
 from requests import post as request_post
 from re import sub as re_sub, search as re_search
 import traceback
-
 
 JSON_FILE_NAME = "update_times.json"
 DETECT_CHANGES_INTERVAL_SECONDS = 300
@@ -104,6 +105,9 @@ def get_latest_scans_across_all_accounts_and_realms(file_info):
     return latest_data
 
 def initiliaze_json():
+    startup_folder = create_shortcut_to_startup()
+    logger.info(f"Startup shortcut created: '{startup_folder}'")
+    
     logger.info(f"Initializing '{JSON_FILE_NAME}'")
     wtf_folder = get_wtf_folder()
     logger.info(f"WTF folder found at: '{wtf_folder}'")
@@ -180,7 +184,6 @@ def main():
     if not json_file_initialized():
         initiliaze_json()
         
-    
     json_changed = True
     while True:
         if json_changed:
