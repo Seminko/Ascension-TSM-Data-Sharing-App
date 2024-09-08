@@ -1,10 +1,11 @@
 # Ascension TSM data sharing
 
-> [!NOTE]
+> [!WARNING]
 > Currently only available for Windows and Area 52 realm.
 
 ## What it does - TLDR
-Periodically checks for a change to scanned data, uploads the latest to the database and downloads the latest to your local PC, mimicking what the official TSM app used for retail WoW does.
+Periodically checks for a change to scanned data, uploads the latest to the database and downloads the latest to your local PC, mimicking what the official TSM app (used on retail WoW) does. As they describe it: "keeps your addon data up-to-date".<br>
+In other words, you will always have access to the most recent prices.<br>
 
 ## What it does - non-TLDR
 When first run, it will create `update_times.json` in the directory where the EXE file is saved which tracks what file got last updated.
@@ -22,6 +23,11 @@ There are two core functionalities:<br>
 - New data upload
   - Everytime you do a scan, be it partial or full, please do a /reload. This will make the game write to the lua file, get detected by the app and uploaded to the DB.
   - The script checks for changes every 5 minutes.
+
+&nbsp;
+
+> [!IMPORTANT]
+> To keep this going, we each need to do our part with scanning and /reload-ing from time to time.
 
 &nbsp;
 
