@@ -135,12 +135,13 @@ def get_last_complete_scan(lua_file_path):
     with open(lua_file_path, "r") as outfile:
         data = luadata_unserialize(outfile.read(), encoding="utf-8", multival=False)
         realm_list = []
-        for realm in data["realm"]:
-            obj = {}
-            obj["realm"] = realm
-            obj["last_complete_scan"] = data["realm"][realm]["lastCompleteScan"]
-            obj["scan_data"] = data["realm"][realm]["scanData"]
-            realm_list.append(obj)
+        if "realm" in data:
+            for realm in data["realm"]:
+                obj = {}
+                obj["realm"] = realm
+                obj["last_complete_scan"] = data["realm"][realm]["lastCompleteScan"]
+                obj["scan_data"] = data["realm"][realm]["scanData"]
+                realm_list.append(obj)
         return realm_list
 
 def get_lua_file_path_info(lua_file_paths):
