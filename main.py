@@ -9,14 +9,15 @@ from json.decoder import JSONDecodeError
 from time import time as time_time, sleep as time_sleep
 import logging
 import argparse
-from requests import post as request_post
+from requests import post as request_post, get as request_get
 from re import sub as re_sub, search as re_search
 import traceback
+from psutil import process_iter
 
 JSON_FILE_NAME = "update_times.json"
-DETECT_CHANGES_INTERVAL_SECONDS = 300
-
-
+UPLOAD_INTERVAL_SECONDS = 300
+DOWNLOAD_INTERVAL_SECONDS = 3600
+REQUEST_TIMEOUT = 60
 
 "do some testing on this..."
 def send_data_to_server(data_to_send):
@@ -25,7 +26,7 @@ def send_data_to_server(data_to_send):
     expn = None
     for rnd in range(1, cap+1):
         try:
-            response = request_post(url, json=data_to_send)
+            response = request_post(url, json=data_to_send, timeout=REQUEST_TIMEOUT)
         except Exception as e:
             expn = e
             logger.debug(f"Sending to db failed: {str(repr(e))}")
@@ -46,7 +47,33 @@ def send_data_to_server(data_to_send):
         raise expn
     raise Exception(f"Sending to db failed: {response_json}")
 
+def get_data_from_server():
+    url =***REMOVED***
+    cap = 5
+    expn = None
+    for rnd in range(1, cap+1):
+        try:
+            response = request_get(url, timeout=REQUEST_TIMEOUT)
+        except Exception as e:
+            expn = e
+            logger.debug(f"Downloading from db failed: {str(repr(e))}")
+            interruptible_sleep(5)
+            continue
         
+        if response.status_code != 200:
+            try:
+                response_json = response.json()
+            except (JSONDecodeError, ValueError):
+                response_json = {"response text": re_sub("(?:\n+|\s\s+)", " ", re_sub('(?:<style>.*<\/style>|<[^<]+?>)', '', response.text)).strip()}
+            logger.debug(f"Downloading from db failed: {response_json}")
+            interruptible_sleep(5)
+            continue
+        
+        return response.text
+    if expn:
+        raise expn
+    raise Exception(f"Sending to db failed: {response_json}")
+    
 def interruptible_sleep(seconds):
     start_time = time_time()
     end_time = start_time + seconds
@@ -175,6 +202,99 @@ def get_tsm_auctiondb_lua_files(wtf_folder):
     else:
         raise ValueError(f"Couldn't find 'TradeSkillMaster_AuctionDB.lua' in any of the following locations: {str(file_path_list)}. Check if TSM is installed and if so, run a full scan first.")
 
+def upload_data(json_changed):
+    logger.info("Upload data started")
+    if json_changed:
+        json_file = read_json_file()
+        wtf_folder = json_file["wtf_path"]
+        lua_file_paths = get_tsm_auctiondb_lua_files(wtf_folder)
+    
+    missing_files = []
+    files_updated = []
+    for lua_file_path in lua_file_paths:
+        obj = next((d for d in json_file["file_info"] if d["file_path"] == lua_file_path), None)
+        if not obj:
+            missing_files.append(lua_file_path)
+            continue
+            
+        if obj["last_modified"] != os_path.getmtime(lua_file_path):
+            files_updated.append(obj)
+    
+    if missing_files or files_updated:
+        json_changed = True
+        
+        if missing_files:
+            logger.info("Upload data - New file detected")
+            file_info = get_lua_file_path_info(missing_files)
+            json_file["file_info"].extend(file_info)
+        
+        if files_updated:
+            logger.info("Upload data - Changes to local file detected")
+            json_file["file_info"] = [o for o in json_file["file_info"] if o not in files_updated]
+            file_info = get_lua_file_path_info([f["file_path"] for f in files_updated])
+            json_file["file_info"].extend([{"file_path": f["file_path"], "last_modified": f["last_modified"]} for f in file_info])
+            
+        file_info = get_lua_file_path_info(lua_file_paths)
+        latest_data = get_latest_scans_across_all_accounts_and_realms(file_info)
+        
+        realms_to_be_pushed = []
+        if json_file["latest_data"] != latest_data:
+            for la in latest_data:
+                if la["last_complete_scan"] > next(r["last_complete_scan"] for r in json_file["latest_data"] if r["realm"] == la["realm"]):
+                    realms_to_be_pushed.append(la)
+                    
+        if realms_to_be_pushed:
+            logger.info("Upload data - New scan timestamp found")
+            
+            "WE WILL NEED ONE DB TABLE FOR EACH REALM, for now Area52 only"
+            area_52_only_import_data = next(r for r in realms_to_be_pushed if r["realm"] == 'Area 52 - Free-Pick')
+            
+            data_to_send = {"scan_data": area_52_only_import_data["scan_data"], "username": area_52_only_import_data["username"]}
+            import_result = send_data_to_server(data_to_send)
+            logger.info("Upload data - " + import_result['message'])
+            
+            for r in realms_to_be_pushed:
+                json_file_obj = next((l for l in json_file["latest_data"] if l["realm"] == r["realm"]), None)
+                if json_file_obj:
+                    json_file_obj["last_complete_scan"] = r["last_complete_scan"]
+                else:
+                    json_file["latest_data"].append(r)
+        else:
+            logger.info("Upload data - Despite local files being updated, no new scan time found")
+        
+        write_json_file(json_file)
+    else:
+        json_changed = False
+        logger.info("Upload data - No changes detected")
+        
+    return json_changed
+
+def is_ascension_running():
+    return 'Ascension.exe' in (p.name() for p in process_iter())
+
+def get_lua_file_paths():
+    json_file = read_json_file()
+    wtf_folder = json_file["wtf_path"]
+    lua_file_paths = get_tsm_auctiondb_lua_files(wtf_folder)
+    
+    return lua_file_paths
+        
+
+def download_data():
+    logger.info("Download data started")
+    if not is_ascension_running():
+        donwloaded_data = get_data_from_server()
+        lua_file_paths = get_lua_file_paths()
+        
+        for lua_file_path in lua_file_paths:
+            with open(lua_file_path, "r") as outfile:
+                data = luadata_unserialize(outfile.read(), encoding="utf-8", multival=False)
+                data["realm"]["Area 52 - Free-Pick"]["scanData"] = donwloaded_data
+                NEFUNGUJE DOBŘE!!! PŘEPIŠ SI SVŮJ PARSER data_serialized = luadata_serialize(data, encoding="utf-8", indent="\t", indent_level=0)
+    else:
+        logger.info("Download data - Ascension is running, skipping download")
+    
+    
 args = parse_arguments()
 debug = args.debug
 
@@ -184,73 +304,23 @@ if "logger" not in globals() and "logger" not in locals():
 def main():
     if not json_file_initialized():
         initiliaze_json()
-        
+    
     json_changed = True
+    last_upload_time = 0
+    last_download_time = 0
     while True:
-        if json_changed:
-            json_file = read_json_file()
-            wtf_folder = json_file["wtf_path"]
-            lua_file_paths = get_tsm_auctiondb_lua_files(wtf_folder)
+        current_time = time_time()
         
-        missing_files = []
-        files_updated = []
-        for lua_file_path in lua_file_paths:
-            obj = next((d for d in json_file["file_info"] if d["file_path"] == lua_file_path), None)
-            if not obj:
-                missing_files.append(lua_file_path)
-                continue
-                
-            if obj["last_modified"] != os_path.getmtime(lua_file_path):
-                files_updated.append(obj)
+        if current_time - last_upload_time >= UPLOAD_INTERVAL_SECONDS:
+            json_changed = upload_data(json_changed)
+            last_upload_time = current_time
+            
+        if current_time - last_download_time >= DOWNLOAD_INTERVAL_SECONDS:
+            download_data()
+            last_download_time = current_time
+            
+        interruptible_sleep(1)
         
-        if missing_files or files_updated:
-            json_changed = True
-            
-            if missing_files:
-                logger.info("New file detected")
-                file_info = get_lua_file_path_info(missing_files)
-                json_file["file_info"].extend(file_info)
-            
-            if files_updated:
-                logger.info("Changes detected")
-                json_file["file_info"] = [o for o in json_file["file_info"] if o not in files_updated]
-                file_info = get_lua_file_path_info([f["file_path"] for f in files_updated])
-                json_file["file_info"].extend([{"file_path": f["file_path"], "last_modified": f["last_modified"]} for f in file_info])
-                
-            file_info = get_lua_file_path_info(lua_file_paths)
-            latest_data = get_latest_scans_across_all_accounts_and_realms(file_info)
-            
-            realms_to_be_pushed = []
-            if json_file["latest_data"] != latest_data:
-                for la in latest_data:
-                    if la["last_complete_scan"] > next(r["last_complete_scan"] for r in json_file["latest_data"] if r["realm"] == la["realm"]):
-                        realms_to_be_pushed.append(la)
-                        
-            if realms_to_be_pushed:
-                logger.info("  New scan timestamp found")
-                
-                "WE WILL NEED ONE DB TABLE FOR EACH REALM, for now Area52 only"
-                area_52_only_import_data = next(r for r in realms_to_be_pushed if r["realm"] == 'Area 52 - Free-Pick')
-                
-                data_to_send = {"scan_data": area_52_only_import_data["scan_data"], "username": area_52_only_import_data["username"]}
-                import_result = send_data_to_server(data_to_send)
-                logger.info("  " + import_result['message'])
-                
-                for r in realms_to_be_pushed:
-                    json_file_obj = next((l for l in json_file["latest_data"] if l["realm"] == r["realm"]), None)
-                    if json_file_obj:
-                        json_file_obj["last_complete_scan"] = r["last_complete_scan"]
-                    else:
-                        json_file["latest_data"].append(r)
-            else:
-                logger.info("  Despite files being updated, no new scan time found")
-            
-            write_json_file(json_file)
-        else:
-            json_changed = False
-            logger.info("No changes detected")
-            
-        interruptible_sleep(DETECT_CHANGES_INTERVAL_SECONDS)
         
 if __name__ == "__main__":
     try:
