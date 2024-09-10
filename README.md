@@ -1,4 +1,4 @@
-# Ascension TSM data sharing
+# Ascension TSM Data Sharing App
 
 > [!WARNING]
 > Currently only available for Windows and Area 52 realm.
