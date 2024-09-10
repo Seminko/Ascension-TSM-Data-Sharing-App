@@ -37,6 +37,11 @@ There are two core functionalities:<br>
 
 &nbsp;
 
+- Q: Why does it require Admin rights? It looks even more suspicious!
+- A: Because Ascension requires admin rights. Without giving this app admin rights as well, we wouldn't be able to update the TSM lua file.
+
+&nbsp;
+
 - Q: Why is the endpoint the data is being sent to / downloaded from removed from the source code? I would like to run it using Python.
 - A: Just to make it a smidge harder for ppl to mess with things.
 
@@ -69,3 +74,8 @@ There are two core functionalities:<br>
 
 - Q: Will this support other realms soon?
 - A: Yes.
+
+&nbsp;
+
+- Q: What if I reinstal Ascension to other location?
+- A: Just delete `update_times.json`. That will re-trigger "the setup" and will try to find / ask for the WTF folder again.
