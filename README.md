@@ -10,7 +10,7 @@ In other words, you will always have access to the most recent prices.<br>
 ## What it does - non-TLDR
 When first run, it will create `update_times.json` in the directory where the EXE file is saved which tracks what file got last updated.
 
-It will also create a shortcut to the exe in your Startup folder (this one: `C:\Users\{USERNAME}\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup`. This will ensure the app runs when you turn on your pc.<br>
+It will also create a shortcut to the exe in your Startup folder (this one: `C:\Users\{USERNAME}\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup`). This will ensure the app runs when you turn on your pc.<br>
 If you don't like this and would rather run the app manually, feel free to remove the shortcut - it will not be created again (as long as you don't delete the update_times.json).<br>
 The idea behind it running on startup is due to the fact that we can only update data in the WTF folder when Ascension is not running, because each /reload, logout to char select or game restart automatically writes to the files (ie it would rewrite what we put there). Hence whenever you launch Ascension you will have the latest data there is.
 
