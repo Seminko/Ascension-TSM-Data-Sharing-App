@@ -21,7 +21,7 @@ There are two core functionalities:<br>
   - Downloads newest data from the DB.
   - Happens ONLY when Ascension is not running and is being downloaded every hour.
 - New data upload
-  - Everytime you do a scan, be it partial or full, please do a /reload. This will make the game write to the lua file, get detected by the app and uploaded to the DB.
+  - When you do a scan, could be partial or full, please do a /reload when you can. This will make the game write to the lua file, get detected by the app and uploaded to the DB.
   - The script checks for changes every 5 minutes.
 
 &nbsp;
