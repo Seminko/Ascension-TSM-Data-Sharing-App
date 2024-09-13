@@ -1,4 +1,4 @@
-# Ascension TSM data sharing
+# Ascension TSM Data Sharing App
 
 > [!WARNING]
 > Currently only available for Windows and Area 52 realm.
@@ -10,7 +10,7 @@ In other words, you will always have access to the most recent prices.<br>
 ## What it does - non-TLDR
 When first run, it will create `update_times.json` in the directory where the EXE file is saved which tracks what file got last updated.
 
-It will also create a shortcut to the exe in your Startup folder (this one: `C:\Users\{USERNAME}\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup`. This will ensure the app runs when you turn on your pc.<br>
+It will also create a shortcut to the exe in your Startup folder (this one: `C:\Users\{USERNAME}\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup`). This will ensure the app runs when you turn on your pc.<br>
 If you don't like this and would rather run the app manually, feel free to remove the shortcut - it will not be created again (as long as you don't delete the update_times.json).<br>
 The idea behind it running on startup is due to the fact that we can only update data in the WTF folder when Ascension is not running, because each /reload, logout to char select or game restart automatically writes to the files (ie it would rewrite what we put there). Hence whenever you launch Ascension you will have the latest data there is.
 
@@ -21,7 +21,7 @@ There are two core functionalities:<br>
   - Downloads newest data from the DB.
   - Happens ONLY when Ascension is not running and is being downloaded every hour.
 - New data upload
-  - Everytime you do a scan, be it partial or full, please do a /reload. This will make the game write to the lua file, get detected by the app and uploaded to the DB.
+  - When you do a scan, could be partial or full, please do a /reload when you can. This will make the game write to the lua file, get detected by the app and uploaded to the DB.
   - The script checks for changes every 5 minutes.
 
 &nbsp;
@@ -34,6 +34,11 @@ There are two core functionalities:<br>
 ## FAQ
 - Q: Why an EXE file?
 - A: So that it's accessible for most ppl, even those without python knowledge.
+
+&nbsp;
+
+- Q: Why does it require Admin rights? It looks even more suspicious!
+- A: Because Ascension requires admin rights. Without giving this app admin rights as well, we wouldn't be able to update the TSM lua file.
 
 &nbsp;
 
@@ -69,3 +74,8 @@ There are two core functionalities:<br>
 
 - Q: Will this support other realms soon?
 - A: Yes.
+
+&nbsp;
+
+- Q: What if I reinstal Ascension to other location?
+- A: Just delete `update_times.json`. That will re-trigger "the setup" and will try to find / ask for the WTF folder again.
