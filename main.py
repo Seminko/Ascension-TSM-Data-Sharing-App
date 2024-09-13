@@ -9,7 +9,7 @@ from json import dumps as json_dumps, loads as json_loads
 from json.decoder import JSONDecodeError
 from time import time as time_time, sleep as time_sleep, strftime as time_strftime
 import logging
-from requests import post as request_post, get as request_get
+import requests
 from re import sub as re_sub, search as re_search
 from psutil import process_iter
 import sys
@@ -28,6 +28,7 @@ UPLOAD_INTERVAL_SECONDS = 300
 DOWNLOAD_INTERVAL_SECONDS = 3600
 REQUEST_TIMEOUT = 60
 NUMBER_OF_LOGS_TO_KEEP = 50
+session = requests.Session()
 
 def process_response_text(response_text):
     new_line_double_space_regex = r"(?:\n+|\s\s+)"
@@ -36,16 +37,19 @@ def process_response_text(response_text):
 
 def send_data_to_server(data_to_send):
     logger.debug("Sending data to server")
+    global session
     url = get_upload_endpoint()
     cap = 5
     expn = None
     for rnd in range(1, cap+1):
         try:
-            response = request_post(url, json=data_to_send, timeout=REQUEST_TIMEOUT)
+            response = session.post(url, json=data_to_send, timeout=REQUEST_TIMEOUT)
         except Exception as e:
             expn = e
             logger.debug(f"Sending to db failed, round: {rnd}, exception: {str(repr(e))}")
             interruptible_sleep(5)
+            session.close()  # Close the session to reset connection
+            session = requests.Session()  # Recreate the session to ensure fresh connection
             continue
         
         if response.status_code != 200:
@@ -65,16 +69,19 @@ def send_data_to_server(data_to_send):
 
 def get_data_from_server():
     logger.debug("Downloading data from server")
+    global session
     url = get_download_endpoint()
     cap = 5
     expn = None
     for rnd in range(1, cap+1):
         try:
-            response = request_get(url, timeout=REQUEST_TIMEOUT)
+            response = session.get(url, timeout=REQUEST_TIMEOUT)
         except Exception as e:
             expn = e
             logger.debug(f"Downloading from db failed, round: {rnd}, exception: {str(repr(e))}")
             interruptible_sleep(5)
+            session.close()  # Close the session to reset connection
+            session = requests.Session()  # Recreate the session to ensure fresh connection
             continue
         
         if response.status_code != 200:
@@ -250,7 +257,7 @@ def get_tsm_auctiondb_lua_files(wtf_folder):
         raise ValueError(f"Couldn't find 'TradeSkillMaster_AuctionDB.lua' in any of the following locations: {str(file_path_list)}. Check if TSM is installed and if so, run a full scan first.")
 
 def upload_data():
-    logger.info("Upload data started")
+    logger.info("UPLOAD BLOCK")
     
     lua_file_paths, json_file = get_lua_file_paths()
     
@@ -326,7 +333,7 @@ def get_lua_file_paths():
 
 
 def download_data():
-    logger.info("Download data started")
+    logger.info("DOWNLOAD BLOCK")
     if not is_ascension_running():
         last_complete_scan, scan_data = get_data_from_server()
         lua_file_paths, json_file = get_lua_file_paths()
