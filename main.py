@@ -2,9 +2,9 @@ from get_wtf_folder import get_wtf_folder
 from save_shortcut import create_shortcut_to_startup
 from hash_username import hash_username
 from get_endpoints import get_upload_endpoint, get_download_endpoint
+import luadata_serialization
 
 from os import path as os_path, listdir as os_listdir, makedirs as os_makedirs, remove as os_remove
-import luadata_serialization
 from json import dumps as json_dumps, loads as json_loads
 from json.decoder import JSONDecodeError
 from time import time as time_time, sleep as time_sleep, strftime as time_strftime
