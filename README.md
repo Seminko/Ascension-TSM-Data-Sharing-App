@@ -58,7 +58,7 @@ There are two core functionalities:<br>
 &nbsp;
 
 - Q: What data gets sent to the DB?
-- A: Your account name and TSM item data. Nothing else.
+- A: Hashed account name and TSM item data. Nothing else.
 
 &nbsp;
 
