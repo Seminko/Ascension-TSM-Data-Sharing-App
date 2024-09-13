@@ -21,7 +21,7 @@ There are two core functionalities:<br>
   - Downloads newest data from the DB.
   - Happens ONLY when Ascension is not running and is being downloaded every hour.
 - New data upload
-  - When you do a scan, could be partial or full, please do a /reload when you can. This will make the game write to the lua file, get detected by the app and uploaded to the DB.
+  - When you do a scan, could be partial or full, please do a /reload when you can. This will make the game write to the LUA   file, get detected by the app and uploaded to the DB.
   - The script checks for changes every 5 minutes.
 
 &nbsp;
@@ -38,7 +38,7 @@ There are two core functionalities:<br>
 &nbsp;
 
 - Q: Why does it require Admin rights? It looks even more suspicious!
-- A: Because Ascension requires admin rights. Without giving this app admin rights as well, we wouldn't be able to update the TSM lua file.
+- A: Because Ascension Launcher requires admin rights. Without giving this app admin rights as well, we wouldn't be able to update the LUA files unless we closed the launcher first.
 
 &nbsp;
 
