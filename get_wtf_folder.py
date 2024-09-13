@@ -62,7 +62,7 @@ def get_wtf_folder():
         return wtf_folder
     
     folder_selected_path = select_folder()
-    if not folder_selected_path.endswith(r"/client/WTF"):
+    if not folder_selected_path.endswith(r"/WTF"):
         raise ValueError("Selected wrong folder. You must select the 'WTF' folder in Ascension directory.")
         
     return folder_selected_path
