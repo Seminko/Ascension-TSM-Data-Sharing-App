@@ -26,7 +26,7 @@ else:
 JSON_PATH = os_path.join(SCRIPT_DIR, JSON_FILE_NAME)
 UPLOAD_INTERVAL_SECONDS = 300
 DOWNLOAD_INTERVAL_SECONDS = 3600
-REQUEST_TIMEOUT = 60
+REQUEST_TIMEOUT = (60, 180)
 NUMBER_OF_LOGS_TO_KEEP = 50
 session = requests.Session()
 
@@ -276,12 +276,12 @@ def upload_data():
         full_file_info = get_lua_file_path_info(lua_file_paths)
         
         if files_new:
-            logger.info("Upload data - New LUA file(s) detected")
+            logger.info("Upload block - New LUA file(s) detected")
             file_info_new_files = [f for f in full_file_info if f["file_path"] in [f["file_path"] for f in files_new]]
             json_file["file_info"].extend(file_info_new_files)
         
         if files_updated:
-            logger.info("Upload data - Changes to LUA file(s) detected")
+            logger.info("Upload block - Changes to LUA file(s) detected")
             json_file["file_info"] = [o for o in json_file["file_info"] if o not in files_updated]
             file_info_updated_files = [f for f in full_file_info if f["file_path"] in [f["file_path"] for f in files_updated]]
             json_file["file_info"].extend([{"file_path": f["file_path"], "last_modified": f["last_modified"]} for f in file_info_updated_files])
@@ -295,14 +295,14 @@ def upload_data():
                     realms_to_be_pushed.append(la)
                     
         if realms_to_be_pushed:
-            logger.info("Upload data - New scan timestamp found")
+            logger.info("Upload block - New scan timestamp found")
             
             "WE WILL NEED ONE DB TABLE FOR EACH REALM, for now Area52 only"
             area_52_only_import_data = next(r for r in realms_to_be_pushed if r["realm"] == 'Area 52 - Free-Pick')
             
             data_to_send = {"scan_data": area_52_only_import_data["scan_data"], "username": hash_username(area_52_only_import_data["username"])}
             import_result = send_data_to_server(data_to_send)
-            logger.info("Upload data - " + import_result['message'])
+            logger.info("Upload block - " + import_result['message'])
             
             for r in realms_to_be_pushed:
                 json_file_obj = next((l for l in json_file["latest_data"] if l["realm"] == r["realm"]), None)
@@ -315,9 +315,9 @@ def upload_data():
             interruptible_sleep(15) # allow for server-side file generation
         else:
             write_json_file(json_file)
-            logger.info("Upload data - Despite LUA file(s) being updated, there are no new scan timestamps")
+            logger.info("Upload block - Despite LUA file(s) being updated, there are no new scan timestamps")
     else:
-        logger.info("Upload data - No changes detected in LUA file(s)")
+        logger.info("Upload block - No changes detected in LUA file(s)")
 
 
 def is_ascension_running():
@@ -341,7 +341,7 @@ def download_data():
         need_to_update_json = False
         for lua_file_path in lua_file_paths:
             with open(lua_file_path, "r") as outfile:
-                logger.debug(f"Download data - processing '{lua_file_path}'")
+                logger.debug(f"Download block - processing '{lua_file_path}'")
                 data = luadata_serialization.unserialize(outfile.read(), encoding="utf-8", multival=False)
                 if "realm" in data:
                     if not data["realm"] and isinstance(data["realm"], list):
@@ -382,11 +382,11 @@ def download_data():
                 realm_dict["last_complete_scan"] = last_complete_scan
                 realm_dict["scan_data"] = scan_data
             write_json_file(json_file)
-            logger.info("Download data - Completed. All LUA files updated successfully.")
+            logger.info("Download block - Completed. All LUA files updated successfully.")
         else:
             logger.info("Download_data, 'Area 52 - Free-Pick' json data is up-to-date, no need to rewrite it")
     else:
-        logger.info("Download data - Ascension is running, skipping download")
+        logger.info("Download block - Ascension is running, skipping download")
     
 
 if "logger" not in globals() and "logger" not in locals():
