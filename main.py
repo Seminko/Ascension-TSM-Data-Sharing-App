@@ -370,7 +370,7 @@ def download_data():
                     data["realm"]["Area 52 - Free-Pick"]["lastScanSecondsPerPage"] = 0.5
                     data["realm"]["Area 52 - Free-Pick"]["scanData"] = scan_data
                 
-                prefix = """-- Created by Ascension TSM Data Sharing App (https://github.com/Seminko/Ascension-TSM-Data-Sharing-App)\nAscensionTSM_AuctionDB = """
+                prefix = """-- Updated by Ascension TSM Data Sharing App (https://github.com/Seminko/Ascension-TSM-Data-Sharing-App)\nAscensionTSM_AuctionDB = """
                 luadata_serialization.write(lua_file_path, data, encoding="utf-8", indent="\t", prefix=prefix)
                 file_obj = next(f for f in json_file["file_info"] if f["file_path"] == lua_file_path)
                 file_obj["last_modified"] = os_path.getmtime(lua_file_path)
