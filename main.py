@@ -14,7 +14,10 @@ from re import sub as re_sub, search as re_search
 from psutil import process_iter
 import sys
 
+import io
+import json
 
+VERSION = 0.7
 JSON_FILE_NAME = "update_times.json"
 #SCRIPT_DIR = os_path.dirname(os_path.abspath(__file__))
 if getattr(sys, 'frozen', False):
@@ -30,6 +33,13 @@ REQUEST_TIMEOUT = (60, 180)
 NUMBER_OF_LOGS_TO_KEEP = 50
 session = requests.Session()
 
+def generate_chunks(file_object, chunk_size=1024):
+    while True:
+        chunk = file_object.read(chunk_size)
+        if not chunk:
+            break
+        yield chunk
+
 def process_response_text(response_text):
     new_line_double_space_regex = r"(?:\n+|\s\s+)"
     html_css_regex = r'(?:[a-zA-Z0-9-_.]+\s\{.*?\}|\\(?=)|<style>.*<\/style>|<[^<]+?>|^\"|Something went wrong :-\(\s*\.?\s*)'
@@ -43,7 +53,8 @@ def send_data_to_server(data_to_send):
     expn = None
     for rnd in range(1, cap+1):
         try:
-            response = session.post(url, json=data_to_send, timeout=REQUEST_TIMEOUT)
+            # response = session.post(url, json=data_to_send, timeout=REQUEST_TIMEOUT)
+            response = session.post(url, data=generate_chunks(data_to_send), timeout=REQUEST_TIMEOUT, stream=True)
         except Exception as e:
             expn = e
             logger.debug(f"Sending to db failed, round: {rnd}, exception: {str(repr(e))}")
@@ -149,7 +160,7 @@ def get_logger():
     log_file = os_path.join(log_dir, 'ascension_tsm_data_sharing_app')
     
     timestamp = time_strftime("%Y%m%d_%H%M%S")
-    log_file_with_suffix = f"{log_file}_{timestamp}"
+    log_file_with_suffix = f"{log_file}_v{VERSION}_{timestamp}"
 
     file_handler = logging.FileHandler(f"{log_file_with_suffix}.log")
     file_handler.setLevel(logging.DEBUG)
@@ -210,7 +221,7 @@ def read_json_file():
         return json_object
     
 def get_last_complete_scan(lua_file_path):
-    logger.debug(f"Getting last complete scans for '{lua_file_path}'")
+    logger.debug(f"Getting last complete scans for '{redact_account_name_from_lua_file_path(lua_file_path)}'")
     with open(lua_file_path, "r") as outfile:
         data = luadata_serialization.unserialize(outfile.read(), encoding="utf-8", multival=False)
         realm_list = []
@@ -226,7 +237,7 @@ def get_last_complete_scan(lua_file_path):
 def get_lua_file_path_info(lua_file_paths):
     file_updated_list = []
     for lua_file_path in lua_file_paths:
-        logger.debug(f"Getting lua file path info for '{lua_file_path}'")
+        logger.debug(f"Getting lua file path info for '{redact_account_name_from_lua_file_path(lua_file_path)}'")
         obj = {}
         obj["file_path"] = lua_file_path
         obj["last_modified"] = os_path.getmtime(lua_file_path)
@@ -301,7 +312,15 @@ def upload_data():
             area_52_only_import_data = next(r for r in realms_to_be_pushed if r["realm"] == 'Area 52 - Free-Pick')
             
             data_to_send = {"scan_data": area_52_only_import_data["scan_data"], "username": hash_username(area_52_only_import_data["username"])}
-            import_result = send_data_to_server(data_to_send)
+            
+            "-----------------------------------------------------------------------------------"
+            "FOR DATA STREAMING"
+            data_to_send_json_string = json.dumps(data_to_send)
+            data_to_send_bytes = io.BytesIO(data_to_send_json_string.encode('utf-8'))
+            import_result = send_data_to_server(data_to_send_bytes)
+            "-----------------------------------------------------------------------------------"
+            
+            # import_result = send_data_to_server(data_to_send)
             logger.info("Upload block - " + import_result['message'])
             
             for r in realms_to_be_pushed:
@@ -331,6 +350,8 @@ def get_lua_file_paths():
     
     return lua_file_paths, json_file
 
+def redact_account_name_from_lua_file_path(lua_file_path):
+    return re_sub(r"(?<=(?:\\|/)Account(?:\\|/))[^\\\/]+", "{REDACTED}", lua_file_path)
 
 def download_data():
     logger.info("DOWNLOAD BLOCK")
@@ -341,7 +362,7 @@ def download_data():
         need_to_update_json = False
         for lua_file_path in lua_file_paths:
             with open(lua_file_path, "r") as outfile:
-                logger.debug(f"Download block - processing '{lua_file_path}'")
+                logger.debug(f"Download block - processing '{redact_account_name_from_lua_file_path(lua_file_path)}'")
                 data = luadata_serialization.unserialize(outfile.read(), encoding="utf-8", multival=False)
                 if "realm" in data:
                     if not data["realm"] and isinstance(data["realm"], list):
