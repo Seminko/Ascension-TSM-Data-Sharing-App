@@ -71,7 +71,9 @@ If an Antivirus blocks the file, put whitelist the folder you saved the EXE to, 
 &nbsp;
 
 - Q: The code did not find the WTF folder, then asked me to find it myself. I don't know where it is. Where can I find it?
-- A: If you're not a special snowflake, find the Ascension Launcher folder, it's under here: `Ascension Launcher\resources\client\WTF`
+- A: The code will look at the default install location as well as other frequently used. If you used another install loc, you have to find it and select the WTF folder like so:
+![folder_select](https://github.com/user-attachments/assets/de21a600-1f00-4c40-b91c-47f4f9e53a10)
+
 
 &nbsp;
 
