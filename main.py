@@ -10,6 +10,8 @@ from json.decoder import JSONDecodeError
 from time import time as time_time, sleep as time_sleep, strftime as time_strftime
 import logging
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 from re import sub as re_sub, search as re_search
 from psutil import process_iter
 import sys
@@ -17,7 +19,8 @@ import sys
 import io
 import json
 
-VERSION = 0.7
+VERSION = 0.8
+
 JSON_FILE_NAME = "update_times.json"
 #SCRIPT_DIR = os_path.dirname(os_path.abspath(__file__))
 if getattr(sys, 'frozen', False):
@@ -27,11 +30,25 @@ else:
     # Running as a regular Python script
     SCRIPT_DIR = os_path.dirname(os_path.abspath(__file__))
 JSON_PATH = os_path.join(SCRIPT_DIR, JSON_FILE_NAME)
+
 UPLOAD_INTERVAL_SECONDS = 300
 DOWNLOAD_INTERVAL_SECONDS = 3600
 REQUEST_TIMEOUT = (60, 180)
+MAX_RETRIES = 7
+RETRY_STRATEGY = Retry(
+    total=MAX_RETRIES,  # Retry up to 5 times
+    backoff_factor=5,  # Wait 5, 10, 20, 40, 80 seconds between retries
+    status_forcelist=[500, 502, 503, 504],  # Retry on these HTTP status codes
+    allowed_methods=["GET", "POST"],  # Apply to these HTTP methods
+    raise_on_status=False,  # Don't raise exception immediately on bad status
+)
+ADAPTER = HTTPAdapter(max_retries=RETRY_STRATEGY)
+
 NUMBER_OF_LOGS_TO_KEEP = 50
+
 session = requests.Session()
+session.mount("https://", ADAPTER)
+session.mount("http://", ADAPTER)
 
 def generate_chunks(file_object, chunk_size=1024):
     while True:
@@ -49,67 +66,31 @@ def send_data_to_server(data_to_send):
     logger.debug("Sending data to server")
     global session
     url = get_upload_endpoint()
-    cap = 5
-    expn = None
-    for rnd in range(1, cap+1):
-        try:
-            # response = session.post(url, json=data_to_send, timeout=REQUEST_TIMEOUT)
-            response = session.post(url, data=generate_chunks(data_to_send), timeout=REQUEST_TIMEOUT, stream=True)
-        except Exception as e:
-            expn = e
-            logger.debug(f"Sending to db failed, round: {rnd}, exception: {str(repr(e))}")
-            interruptible_sleep(5)
-            session.close()  # Close the session to reset connection
-            session = requests.Session()  # Recreate the session to ensure fresh connection
-            continue
-        
-        if response.status_code != 200:
-            logger.debug(f"Response status code: {response.status_code}, round: {rnd}")
-            try:
-                response_json = response.json()
-            except (JSONDecodeError, ValueError):
-                response_json = process_response_text(response.text)
-            logger.debug(f"Sending to db failed: {response_json}")
-            interruptible_sleep(5)
-            continue
-        
-        return response.json()
-    if expn:
-        raise expn
-    raise Exception(f"Sending to db failed: {response_json}")
+    # response = session.post(url, json=data_to_send, timeout=REQUEST_TIMEOUT)
+    try:
+        response = session.post(url, data=generate_chunks(data_to_send), timeout=REQUEST_TIMEOUT, stream=True)
+        response.raise_for_status()
+    except Exception as e:
+        logging.critical(f"Sending to DB failed even after {MAX_RETRIES} tries")
+        raise e
+    try:
+        response_json = response.json()
+    except (JSONDecodeError, ValueError):
+        response_json = process_response_text(response.text)
+    return response_json
 
 def get_data_from_server():
     logger.debug("Downloading data from server")
     global session
     url = get_download_endpoint()
-    cap = 5
-    expn = None
-    for rnd in range(1, cap+1):
-        try:
-            response = session.get(url, timeout=REQUEST_TIMEOUT)
-        except Exception as e:
-            expn = e
-            logger.debug(f"Downloading from db failed, round: {rnd}, exception: {str(repr(e))}")
-            interruptible_sleep(5)
-            session.close()  # Close the session to reset connection
-            session = requests.Session()  # Recreate the session to ensure fresh connection
-            continue
-        
-        if response.status_code != 200:
-            logger.debug(f"Response status code: {response.status_code}, round: {rnd}")
-            try:
-                response_json = response.json()
-            except (JSONDecodeError, ValueError):
-                response_json = process_response_text(response.text)
-            logger.debug(f"Downloading from db failed: {response_json}")
-            interruptible_sleep(5)
-            continue
-        
-        response_list = response.text.split("||")
-        return int(response_list[0]), response_list[1]
-    if expn:
-        raise expn
-    raise Exception(f"Sending to db failed: {response_json}")
+    try:
+        response = session.get(url, timeout=REQUEST_TIMEOUT)
+        response.raise_for_status()
+    except Exception as e:
+        logging.critical(f"Downloading from DB failed even after {MAX_RETRIES} tries")
+        raise e
+    response_list = response.text.split("||")
+    return int(response_list[0]), response_list[1]
     
 def interruptible_sleep(seconds):
     start_time = time_time()
@@ -164,7 +145,7 @@ def get_logger():
 
     file_handler = logging.FileHandler(f"{log_file_with_suffix}.log")
     file_handler.setLevel(logging.DEBUG)
-    file_formatter = logging.Formatter('%(asctime)s - %(levelname)-5s - [%(funcName)s]: %(message)s')
+    file_formatter = logging.Formatter('%(asctime)s - %(levelname)-8s - [%(funcName)s]: %(message)s')
     file_handler.setFormatter(file_formatter)
     logger.addHandler(file_handler)
     
