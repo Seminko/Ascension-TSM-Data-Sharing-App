@@ -38,7 +38,7 @@ There are two core functionalities:<br>
 &nbsp;
 
 - Q: Why does it require Admin rights? It looks even more suspicious!
-- A: Because the LUA files saved in the default directory (\Program Files\Ascension Launcher\) can be updated only with admin rights. Without giving this app admin rights as well, we wouldn't be able to update the LUA files unless we closed the launcher first.
+- A: Because the LUA files saved in the default directory (`\Program Files\Ascension Launcher\`) can be updated only with admin rights. Without giving this app admin rights as well, we wouldn't be able to update the LUA files.
 
 &nbsp;
 
