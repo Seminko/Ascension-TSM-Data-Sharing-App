@@ -1,7 +1,9 @@
 # Ascension TSM Data Sharing App
 
-> [!WARNING]
-> Currently only available for Windows and Area 52 realm.
+> [!CAUTION]
+> Will most likely be blocked by Windows Defender / Antivirus software
+> 
+> READ FAQ
 
 ## What it does - TLDR
 Periodically checks for a change to scanned data, uploads the latest to the database and downloads the latest to your local PC, mimicking what the official TSM app (used on retail WoW) does. As they describe it: "keeps your addon data up-to-date".<br>
@@ -26,6 +28,9 @@ There are two core functionalities:<br>
 
 &nbsp;
 
+> [!WARNING]
+> Currently only available for Windows and Area 52 realm.
+
 > [!IMPORTANT]
 > To keep this going, we each need to do our part with scanning and /reload-ing from time to time.
 
@@ -47,8 +52,21 @@ There are two core functionalities:<br>
 
 &nbsp;
 
+- Q: Windows defender says it protected my PC / My Antivirus moved the file to quarantine! I knew it!
+- A: Windows defender will flag all unsigned apps. To get the app signed requires a form of approval, which you have to request. It takes time and costs money (there is a free version but each code change would have to be approved again an again, and we would wait again and again). Antivirus software works similarly. Also, since we have a single EXE, the compiler has to include all the dependencies (ie modules / libraries like the re module used for regex) into the single file and WD / Antivirus don't like that because viruses / malware do the same. However, you can see 99% of the code here on GitHub so those who can read python can confirm there's nothing nefarious going on here. (The last 1% is explained in the point below)
+
+To allow this file in Windows Defender, do this:
+![windows-defender_updated](https://github.com/user-attachments/assets/f8a023cd-5a8e-4202-9df8-b07889711eb6)
+
+If an Antivirus blocks the file, put whitelist the folder you saved the EXE to, eg:
+![image](https://github.com/user-attachments/assets/17e55557-479a-4574-9664-de7ba3ab3f19)
+![image](https://github.com/user-attachments/assets/bcbf156d-8f6e-47ed-88d5-d60f20dcdbfc)
+
+
+&nbsp;
+
 - Q: Can I run it using Python instead of the EXE?
-- A: Unfortunately no. There are crucial files missing from the repo (server endpoints, hash-salting mechanism, ...) to make it a smidge harder for ppl to mess with things.
+- A: Unfortunately no. There are crucial files missing from the repo, like server endpoints, hash-salting mechanism, etc.
 
 &nbsp;
 
