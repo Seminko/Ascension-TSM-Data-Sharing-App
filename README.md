@@ -32,9 +32,14 @@ There are two core functionalities:<br>
 &nbsp;
 
 ## FAQ
-- Q: Why an EXE file?
+- Q: Why an EXE file? I don't like that!
 - A: So that it's accessible for most ppl, even those without python knowledge.
 
+&nbsp;
+
+- Q: Why is the EXE so big? It looks suspicious!
+- A: Because pyinstaller has to bundle all dependencies to the EXE file.
+- 
 &nbsp;
 
 - Q: Why does it require Admin rights? It looks even more suspicious!
@@ -42,18 +47,13 @@ There are two core functionalities:<br>
 
 &nbsp;
 
-- Q: Why is the endpoint the data is being sent to / downloaded from removed from the source code? I would like to run it using Python.
-- A: Just to make it a smidge harder for ppl to mess with things.
-
-&nbsp;
-
-- Q: Why is the EXE so big? It looks suspicious!
-- A: Because pyinstaller has to bundle all dependencies to the EXE file and also I have little experience with it.
+- Q: Can I run it using Python instead of the EXE?
+- A: Unfortunately no. There are crucial files missing from the repo (server endpoints, hash-salting mechanism, ...) to make it a smidge harder for ppl to mess with things.
 
 &nbsp;
 
 - Q: The code did not find the WTF folder, then asked me to find it myself. I don't know where it is. Where can I find it?
-- A: Find the Ascension Launcher folder, it's under here: `Ascension Launcher\resources\client\WTF`
+- A: If you're not a special snowflake, find the Ascension Launcher folder, it's under here: `Ascension Launcher\resources\client\WTF`
 
 &nbsp;
 
@@ -67,15 +67,15 @@ There are two core functionalities:<br>
 
 &nbsp;
 
+- Q: Will this support realms other than Area 52 soon?
+- A: Yes.
+
+&nbsp;
+
 - Q: Will this support Linux?
 - A: Once we iron things out for Windows I'm open to it.
 
 &nbsp;
 
-- Q: Will this support other realms soon?
-- A: Yes.
-
-&nbsp;
-
-- Q: What if I reinstal Ascension to other location?
+- Q: What if I reinstal Ascension to other location or mess with Ascension folder structure?
 - A: Just delete `update_times.json`. That will re-trigger "the setup" and will try to find / ask for the WTF folder again.
