@@ -1,7 +1,9 @@
 # Ascension TSM Data Sharing App
 
-> [!WARNING]
-> Currently only available for Windows and Area 52 realm.
+> [!CAUTION]
+> Will most likely be blocked by Windows Defender / Antivirus software
+> 
+> READ FAQ
 
 ## What it does - TLDR
 Periodically checks for a change to scanned data, uploads the latest to the database and downloads the latest to your local PC, mimicking what the official TSM app (used on retail WoW) does. As they describe it: "keeps your addon data up-to-date".<br>
@@ -26,34 +28,52 @@ There are two core functionalities:<br>
 
 &nbsp;
 
+> [!WARNING]
+> Currently only available for Windows and Area 52 realm.
+
 > [!IMPORTANT]
 > To keep this going, we each need to do our part with scanning and /reload-ing from time to time.
 
 &nbsp;
 
 ## FAQ
-- Q: Why an EXE file?
+- Q: Why an EXE file? I don't like that!
 - A: So that it's accessible for most ppl, even those without python knowledge.
 
 &nbsp;
 
-- Q: Why does it require Admin rights? It looks even more suspicious!
-- A: Because Ascension Launcher requires admin rights. Without giving this app admin rights as well, we wouldn't be able to update the LUA files unless we closed the launcher first.
-
-&nbsp;
-
-- Q: Why is the endpoint the data is being sent to / downloaded from removed from the source code? I would like to run it using Python.
-- A: Just to make it a smidge harder for ppl to mess with things.
-
-&nbsp;
-
 - Q: Why is the EXE so big? It looks suspicious!
-- A: Because pyinstaller has to bundle all dependencies to the EXE file and also I have little experience with it.
+- A: Because pyinstaller has to bundle all dependencies to the EXE file.
+
+&nbsp;
+
+- Q: Why does it require Admin rights? It looks even more suspicious!
+- A: Because the LUA files saved in the default directory (`\Program Files\Ascension Launcher\`) can be updated only with admin rights. Without giving this app admin rights as well, we wouldn't be able to update the LUA files.
+
+&nbsp;
+
+- Q: Windows defender says it protected my PC / My Antivirus moved the file to quarantine! I knew it!
+- A: Windows defender will flag all unsigned apps. To get the app signed requires a form of approval, which you have to request. It takes time and costs money (there is a free version but each code change would have to be approved again an again, and we would wait again and again). Antivirus software works similarly. Also, since we have a single EXE, the compiler has to include all the dependencies (ie modules / libraries like the re module used for regex) into the single file and WD / Antivirus don't like that because viruses / malware do the same. However, you can see 99% of the code here on GitHub so those who can read python can confirm there's nothing nefarious going on here. (The last 1% is explained in the point below)
+
+To allow this file in Windows Defender, do this:
+![windows-defender_updated](https://github.com/user-attachments/assets/f8a023cd-5a8e-4202-9df8-b07889711eb6)
+
+If an Antivirus blocks the file, put whitelist the folder you saved the EXE to, eg:
+![image](https://github.com/user-attachments/assets/17e55557-479a-4574-9664-de7ba3ab3f19)
+![image](https://github.com/user-attachments/assets/bcbf156d-8f6e-47ed-88d5-d60f20dcdbfc)
+
+
+&nbsp;
+
+- Q: Can I run it using Python instead of the EXE?
+- A: Unfortunately no. There are crucial files missing from the repo, like server endpoints, hash-salting mechanism, etc.
 
 &nbsp;
 
 - Q: The code did not find the WTF folder, then asked me to find it myself. I don't know where it is. Where can I find it?
-- A: Find the Ascension Launcher folder, it's under here: `Ascension Launcher\resources\client\WTF`
+- A: The code will look at the default install location as well as other frequently used. If you used another install loc, you have to find it and select the WTF folder like so:
+![folder_select](https://github.com/user-attachments/assets/de21a600-1f00-4c40-b91c-47f4f9e53a10)
+
 
 &nbsp;
 
@@ -67,15 +87,15 @@ There are two core functionalities:<br>
 
 &nbsp;
 
+- Q: Will this support realms other than Area 52 soon?
+- A: Yes.
+
+&nbsp;
+
 - Q: Will this support Linux?
 - A: Once we iron things out for Windows I'm open to it.
 
 &nbsp;
 
-- Q: Will this support other realms soon?
-- A: Yes.
-
-&nbsp;
-
-- Q: What if I reinstal Ascension to other location?
+- Q: What if I reinstal Ascension to other location or mess with Ascension folder structure?
 - A: Just delete `update_times.json`. That will re-trigger "the setup" and will try to find / ask for the WTF folder again.
