@@ -39,7 +39,7 @@ There are two core functionalities:<br>
 
 - Q: Why is the EXE so big? It looks suspicious!
 - A: Because pyinstaller has to bundle all dependencies to the EXE file.
-- 
+
 &nbsp;
 
 - Q: Why does it require Admin rights? It looks even more suspicious!
