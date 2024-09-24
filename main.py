@@ -19,7 +19,7 @@ import sys
 import io
 import json
 
-VERSION = 0.9
+VERSION = 0.10
 
 JSON_FILE_NAME = "update_times.json"
 #SCRIPT_DIR = os_path.dirname(os_path.abspath(__file__))
@@ -294,17 +294,14 @@ def upload_data():
                 if la["last_complete_scan"] > next((r["last_complete_scan"] for r in json_file["latest_data"] if r["realm"] == la["realm"]), 0):
                     realms_to_be_pushed.append(la)
                     
-        if [r for r in realms_to_be_pushed if r["realm"] == 'Area 52 - Free-Pick']:
+        if realms_to_be_pushed:
             logger.info("Upload block - New scan timestamp found")
-            
-            "WE WILL NEED ONE DB TABLE FOR EACH REALM, for now Area52 only"
-            area_52_only_import_data = next(r for r in realms_to_be_pushed if r["realm"] == 'Area 52 - Free-Pick')
-            
-            data_to_send = {"scan_data": area_52_only_import_data["scan_data"], "username": hash_username(area_52_only_import_data["username"])}
-            
+            for r in realms_to_be_pushed:
+                r["username"] = hash_username(r["username"])
+                
             "-----------------------------------------------------------------------------------"
             "FOR DATA STREAMING"
-            data_to_send_json_string = json.dumps(data_to_send)
+            data_to_send_json_string = json.dumps(realms_to_be_pushed)
             data_to_send_bytes = io.BytesIO(data_to_send_json_string.encode('utf-8'))
             import_result = send_data_to_server(data_to_send_bytes)
             "-----------------------------------------------------------------------------------"
