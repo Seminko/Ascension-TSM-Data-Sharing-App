@@ -19,7 +19,7 @@ import sys
 import io
 import json
 
-VERSION = 0.8
+VERSION = 0.9
 
 JSON_FILE_NAME = "update_times.json"
 #SCRIPT_DIR = os_path.dirname(os_path.abspath(__file__))
@@ -69,14 +69,17 @@ def send_data_to_server(data_to_send):
     # response = session.post(url, json=data_to_send, timeout=REQUEST_TIMEOUT)
     try:
         response = session.post(url, data=generate_chunks(data_to_send), timeout=REQUEST_TIMEOUT, stream=True)
+        if response.status_code == 400:
+            logger.critical(f"Sending to DB failed: '{process_response_text(response.text)}'")
+        elif response.status_code != 200:
+            logger.critical(f"Sending to DB failed. Status code: {response.status_code}")
         response.raise_for_status()
     except Exception as e:
-        logging.critical(f"Sending to DB failed even after {MAX_RETRIES} tries")
+        logger.critical(f"Sending to DB failed even after {MAX_RETRIES} tries")
         raise e
-    try:
-        response_json = response.json()
-    except (JSONDecodeError, ValueError):
-        response_json = process_response_text(response.text)
+    
+    response_json = response.json()
+    
     return response_json
 
 def get_data_from_server():
@@ -85,10 +88,15 @@ def get_data_from_server():
     url = get_download_endpoint()
     try:
         response = session.get(url, timeout=REQUEST_TIMEOUT)
+        if response.status_code == 400:
+            logger.critical(f"Downloading from DB failed: '{process_response_text(response.text)}'")
+        elif response.status_code != 200:
+            logger.critical(f"Downloading from DB failed. Status code: {response.status_code}")
         response.raise_for_status()
     except Exception as e:
-        logging.critical(f"Downloading from DB failed even after {MAX_RETRIES} tries")
+        logger.critical(f"Downloading from DB failed even after {MAX_RETRIES} tries")
         raise e
+        
     response_list = response.text.split("||")
     return int(response_list[0]), response_list[1]
     
@@ -286,7 +294,7 @@ def upload_data():
                 if la["last_complete_scan"] > next((r["last_complete_scan"] for r in json_file["latest_data"] if r["realm"] == la["realm"]), 0):
                     realms_to_be_pushed.append(la)
                     
-        if realms_to_be_pushed:
+        if [r for r in realms_to_be_pushed if r["realm"] == 'Area 52 - Free-Pick']:
             logger.info("Upload block - New scan timestamp found")
             
             "WE WILL NEED ONE DB TABLE FOR EACH REALM, for now Area52 only"
@@ -347,25 +355,25 @@ def download_data():
                 data = luadata_serialization.unserialize(outfile.read(), encoding="utf-8", multival=False)
                 if "realm" in data:
                     if not data["realm"] and isinstance(data["realm"], list):
-                        logger.debug("Download_data, data['realm'] is empty list")
+                        logger.debug("Donwload block, data['realm'] is empty list")
                         data["realm"] = {}
                         
                     if "Area 52 - Free-Pick" in data["realm"]:
                         if data["realm"]["Area 52 - Free-Pick"]["lastCompleteScan"] < last_complete_scan:
-                            logger.debug("Download_data, 'Area 52 - Free-Pick' in data['realm']")
+                            logger.debug("Donwload block, 'Area 52 - Free-Pick' in data['realm']")
                             data["realm"]["Area 52 - Free-Pick"]["lastCompleteScan"] = last_complete_scan
                             data["realm"]["Area 52 - Free-Pick"]["scanData"] = scan_data
                         else:
-                            logger.debug("Download_data, 'Area 52 - Free-Pick' data is up-to-date, no need to rewrite it")
+                            logger.debug("Donwload block, 'Area 52 - Free-Pick' data is up-to-date, no need to rewrite it")
                             continue
                     else:
-                        logger.debug("Download_data, 'Area 52 - Free-Pick' not in data['realm']")
+                        logger.debug("Donwload block, 'Area 52 - Free-Pick' not in data['realm']")
                         data["realm"]["Area 52 - Free-Pick"] = {}
                         data["realm"]["Area 52 - Free-Pick"]["lastCompleteScan"] = last_complete_scan
                         data["realm"]["Area 52 - Free-Pick"]["lastScanSecondsPerPage"] = 0.5
                         data["realm"]["Area 52 - Free-Pick"]["scanData"] = scan_data
                 else:
-                    logger.debug("Download_data, realm not in data")
+                    logger.debug("Donwload block, realm not in data")
                     data["realm"] = {}
                     data["realm"]["Area 52 - Free-Pick"] = {}
                     data["realm"]["Area 52 - Free-Pick"]["lastCompleteScan"] = last_complete_scan
@@ -386,7 +394,7 @@ def download_data():
             write_json_file(json_file)
             logger.info("Download block - Completed. All LUA files updated successfully.")
         else:
-            logger.info("Download_data, 'Area 52 - Free-Pick' json data is up-to-date, no need to rewrite it")
+            logger.info("Donwload block, 'Area 52 - Free-Pick' json data is up-to-date, no need to rewrite it")
     else:
         logger.info("Download block - Ascension is running, skipping download")
     
