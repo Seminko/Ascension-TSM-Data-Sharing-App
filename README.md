@@ -33,7 +33,7 @@ There are two core functionalities:<br>
 &nbsp;
 
 > [!WARNING]
-> Currently only available for Windows and Area 52 realm.
+> Currently only available for Windows.
 
 > [!IMPORTANT]
 > To keep this going, we each need to do our part with scanning and /reload-ing from time to time.
@@ -82,22 +82,17 @@ If an Antivirus blocks the file, put whitelist the folder you saved the EXE to, 
 &nbsp;
 
 - Q: What data gets sent to the DB?
-- A: Hashed account name and TSM item data. Nothing else.
+- A: Hashed account name and TSM scan (item) data. Nothing else.
 
 &nbsp;
 
 - Q: Are multiple accounts supported?
-- A: Yes. The code will only upload the latest data per realm regardless of account. (Currently only supports Area 52 until properly tested.)
-
-&nbsp;
-
-- Q: Will this support realms other than Area 52 soon?
-- A: Yes.
+- A: Yes. The code will only upload the latest data per realm regardless of account.
 
 &nbsp;
 
 - Q: Will this support Linux?
-- A: Once we iron things out for Windows I'm open to it.
+- A: Not sure. I'm losing interested in Ascension atm. If there's enough demand, we'll see.
 
 &nbsp;
 
