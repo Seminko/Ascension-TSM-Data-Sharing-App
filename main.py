@@ -1,12 +1,11 @@
 from get_wtf_folder import get_wtf_folder
 from save_shortcut import create_shortcut_to_startup
 from hash_username import hash_username
-from get_endpoints import get_upload_endpoint, get_download_endpoint
+from get_endpoints import get_upload_endpoint, get_download_endpoint, remove_endpoint_from_str
 import luadata_serialization
 
 from os import path as os_path, listdir as os_listdir, makedirs as os_makedirs, remove as os_remove
 from json import dumps as json_dumps, loads as json_loads
-from json.decoder import JSONDecodeError
 from time import time as time_time, sleep as time_sleep, strftime as time_strftime
 import logging
 import requests
@@ -15,24 +14,27 @@ from urllib3.util.retry import Retry
 from re import sub as re_sub, search as re_search
 from psutil import process_iter
 import sys
-
 import io
 import json
 
-VERSION = 0.10
 
-JSON_FILE_NAME = "update_times.json"
-#SCRIPT_DIR = os_path.dirname(os_path.abspath(__file__))
+VERSION = "0.10"
+
 if getattr(sys, 'frozen', False):
     # Running in PyInstaller executable
     SCRIPT_DIR = os_path.dirname(sys.executable)
 else:
     # Running as a regular Python script
     SCRIPT_DIR = os_path.dirname(os_path.abspath(__file__))
+    
+JSON_FILE_NAME = "update_times.json"
 JSON_PATH = os_path.join(SCRIPT_DIR, JSON_FILE_NAME)
 
 UPLOAD_INTERVAL_SECONDS = 300
-DOWNLOAD_INTERVAL_SECONDS = 3600
+DOWNLOAD_INTERVAL_SECONDS = 900
+HTTP_TRY_CAP = 5
+upload_tries = 1
+download_tries = 1
 REQUEST_TIMEOUT = (60, 180)
 MAX_RETRIES = 7
 RETRY_STRATEGY = Retry(
@@ -64,41 +66,54 @@ def process_response_text(response_text):
 
 def send_data_to_server(data_to_send):
     logger.debug("Sending data to server")
+    global upload_tries
     global session
     url = get_upload_endpoint()
     # response = session.post(url, json=data_to_send, timeout=REQUEST_TIMEOUT)
     try:
-        response = session.post(url, data=generate_chunks(data_to_send), timeout=REQUEST_TIMEOUT, stream=True)
-        if response.status_code == 400:
-            logger.critical(f"Sending to DB failed: '{process_response_text(response.text)}'")
-        elif response.status_code != 200:
-            logger.critical(f"Sending to DB failed. Status code: {response.status_code}")
-        response.raise_for_status()
+        with session.post(url, data=generate_chunks(data_to_send), timeout=REQUEST_TIMEOUT, stream=True) as response:
+            if response.status_code == 200:
+                upload_tries = 1
+            elif response.status_code == 400:
+                logger.critical(f"{process_response_text(response.text)}")
+            else:
+                logger.critical(f"Status code: {response.status_code}")
+                
+            response.raise_for_status()
+            response_json = response.json()
     except Exception as e:
-        logger.critical(f"Sending to DB failed even after {MAX_RETRIES} tries")
-        raise e
-    
-    response_json = response.json()
-    
+        logger.critical("Sending to DB failed")
+        upload_tries += 1
+        if upload_tries > HTTP_TRY_CAP:
+            raise type(e)(remove_endpoint_from_str(e)) from None
+        return None
+        
     return response_json
 
 def get_data_from_server():
     logger.debug("Downloading data from server")
+    global download_tries
     global session
     url = get_download_endpoint()
     try:
-        response = session.get(url, timeout=REQUEST_TIMEOUT)
-        if response.status_code == 400:
-            logger.critical(f"Downloading from DB failed: '{process_response_text(response.text)}'")
-        elif response.status_code != 200:
-            logger.critical(f"Downloading from DB failed. Status code: {response.status_code}")
-        response.raise_for_status()
+        with session.get(url, timeout=REQUEST_TIMEOUT) as response:
+            if response.status_code == 200:
+                download_tries = 1
+            elif response.status_code == 400:
+                logger.critical(f"{process_response_text(response.text)}")
+            else:
+                logger.critical(f"Status code: {response.status_code}")
+    
+            response.raise_for_status()
+            response_json = response.json()
     except Exception as e:
-        logger.critical(f"Downloading from DB failed even after {MAX_RETRIES} tries")
-        raise e
-        
-    response_list = response.text.split("||")
-    return int(response_list[0]), response_list[1]
+        logger.critical("Downloading from DB failed")
+        download_tries += 1
+        if download_tries > HTTP_TRY_CAP:
+            raise type(e)(remove_endpoint_from_str(e)) from None
+        return None
+    
+    return response_json
     
 def interruptible_sleep(seconds):
     start_time = time_time()
@@ -127,6 +142,7 @@ def remove_old_logs():
                 os_remove(log_to_remove)
             except PermissionError as e:
                 logger.debug(f"Removing log '{log_to_remove}' failed due to: '{str(repr(e))}'") 
+        logger.info("------------------------")
     else:
         logger.debug("No logs to be removed")
 
@@ -196,6 +212,7 @@ def initiliaze_json():
     obj["file_info"] = [{"file_path": f["file_path"], "last_modified": f["last_modified"]} for f in file_info]
     obj["latest_data"] = latest_data
     write_json_file(obj)
+    logger.info("------------------------")
         
 def write_json_file(json_object):
     logger.debug("Saving json file")
@@ -277,7 +294,7 @@ def upload_data():
         
         if files_new:
             logger.info("Upload block - New LUA file(s) detected")
-            file_info_new_files = [f for f in full_file_info if f["file_path"] in [f["file_path"] for f in files_new]]
+            file_info_new_files = [{"file_path": f["file_path"], "last_modified": f["last_modified"]} for f in full_file_info if f["file_path"] in files_new]
             json_file["file_info"].extend(file_info_new_files)
         
         if files_updated:
@@ -288,28 +305,34 @@ def upload_data():
             
         latest_data = get_latest_scans_across_all_accounts_and_realms(full_file_info)
         
-        realms_to_be_pushed = []
+        updated_realms = []
         if json_file["latest_data"] != latest_data:
             for la in latest_data:
                 if la["last_complete_scan"] > next((r["last_complete_scan"] for r in json_file["latest_data"] if r["realm"] == la["realm"]), 0):
-                    realms_to_be_pushed.append(la)
+                    updated_realms.append(la)
                     
-        if realms_to_be_pushed:
-            logger.info("Upload block - New scan timestamp found")
-            for r in realms_to_be_pushed:
-                r["username"] = hash_username(r["username"])
+        if updated_realms:
+            dev_server_regex = r"(?i)\b(?:alpha|dev|development|ptr|qa|recording|og 9 classes)\b"
+            updated_realms_to_send = [r for r in updated_realms if not re_search(dev_server_regex, r["realm"])]
+            if updated_realms_to_send:
+                logger.info(f"""Upload block - New scan timestamp found for realms: {", ".join(["'" + r["realm"] + "'" for r in updated_realms_to_send])}""")
+                for r in updated_realms_to_send:
+                    r["username"] = hash_username(r["username"])
+
+                data_to_send_json_string = json.dumps(updated_realms_to_send)
+                data_to_send_bytes = io.BytesIO(data_to_send_json_string.encode('utf-8'))
+                logger.info("Upload block - Sending data")
+                import_result = send_data_to_server(data_to_send_bytes)
+            
+                if not import_result:
+                    logger.warning("Upload block - Upload failed silenty. Will retry")
+                    return
                 
-            "-----------------------------------------------------------------------------------"
-            "FOR DATA STREAMING"
-            data_to_send_json_string = json.dumps(realms_to_be_pushed)
-            data_to_send_bytes = io.BytesIO(data_to_send_json_string.encode('utf-8'))
-            import_result = send_data_to_server(data_to_send_bytes)
-            "-----------------------------------------------------------------------------------"
+                logger.info("Upload block - " + import_result['message'])
+            else:
+                logger.info("Upload block - New scan timestamp found but only for Dev/PTR/QA etc servers, ignoring")
             
-            # import_result = send_data_to_server(data_to_send)
-            logger.info("Upload block - " + import_result['message'])
-            
-            for r in realms_to_be_pushed:
+            for r in updated_realms:
                 json_file_obj = next((l for l in json_file["latest_data"] if l["realm"] == r["realm"]), None)
                 if json_file_obj:
                     json_file_obj["last_complete_scan"] = r["last_complete_scan"]
@@ -323,7 +346,6 @@ def upload_data():
             logger.info("Upload block - Despite LUA file(s) being updated, there are no new scan timestamps")
     else:
         logger.info("Upload block - No changes detected in LUA file(s)")
-
 
 def is_ascension_running():
     logger.debug("Checking if Ascension is running")
@@ -339,59 +361,86 @@ def get_lua_file_paths():
 def redact_account_name_from_lua_file_path(lua_file_path):
     return re_sub(r"(?<=(?:\\|/)Account(?:\\|/))[^\\\/]+", "{REDACTED}", lua_file_path)
 
+def get_account_name_from_lua_file_path(lua_file_path):
+    match = re_search(r"(?<=(?:\\|/)Account(?:\\|/))[^\\\/]+", lua_file_path)
+    if match:
+        return match[0]
+    return None
+
 def download_data():
     logger.info("DOWNLOAD BLOCK")
     if not is_ascension_running():
-        last_complete_scan, scan_data = get_data_from_server()
+        downloaded_data = get_data_from_server()
+        if not downloaded_data:
+            logger.warning("Download block - Download failed silenty. Will retry")
+            return
         lua_file_paths, json_file = get_lua_file_paths()
         
         need_to_update_json = False
+        need_to_update_lua_file = False
         for lua_file_path in lua_file_paths:
             with open(lua_file_path, "r") as outfile:
-                logger.debug(f"Download block - processing '{redact_account_name_from_lua_file_path(lua_file_path)}'")
+                logger.debug(f"Download block - Processing '{redact_account_name_from_lua_file_path(lua_file_path)}'")
                 data = luadata_serialization.unserialize(outfile.read(), encoding="utf-8", multival=False)
-                if "realm" in data:
-                    if not data["realm"] and isinstance(data["realm"], list):
-                        logger.debug("Donwload block, data['realm'] is empty list")
-                        data["realm"] = {}
-                        
-                    if "Area 52 - Free-Pick" in data["realm"]:
-                        if data["realm"]["Area 52 - Free-Pick"]["lastCompleteScan"] < last_complete_scan:
-                            logger.debug("Donwload block, 'Area 52 - Free-Pick' in data['realm']")
-                            data["realm"]["Area 52 - Free-Pick"]["lastCompleteScan"] = last_complete_scan
-                            data["realm"]["Area 52 - Free-Pick"]["scanData"] = scan_data
+                for download_obj in downloaded_data:
+                    logger.debug(f"""Download block - Processing '{download_obj["realm"]}'""")
+                    if "realm" in data:
+                        if not data["realm"] and isinstance(data["realm"], list):
+                            logger.debug("Donwload block - data['realm'] is empty list")
+                            data["realm"] = {}
+                            
+                        if download_obj["realm"] in data["realm"]:
+                            if data["realm"][download_obj["realm"]]["lastCompleteScan"] < download_obj["last_complete_scan"]:
+                                logger.debug(f"""Donwload block - '{download_obj["realm"]}' in data['realm'], updating it""")
+                                data["realm"][download_obj["realm"]]["lastCompleteScan"] = download_obj["last_complete_scan"]
+                                data["realm"][download_obj["realm"]]["scanData"] = download_obj["scan_data"]
+                                need_to_update_lua_file = True
+                            else:
+                                logger.debug(f"""Donwload block - '{download_obj["realm"]}' data is up-to-date, no need to rewrite it""")
+                                continue
                         else:
-                            logger.debug("Donwload block, 'Area 52 - Free-Pick' data is up-to-date, no need to rewrite it")
-                            continue
+                            logger.debug(f"""Donwload block - '{download_obj["realm"]}' not in data['realm'], adding it""")
+                            data["realm"][download_obj["realm"]] = {}
+                            data["realm"][download_obj["realm"]]["lastCompleteScan"] = download_obj["last_complete_scan"]
+                            data["realm"][download_obj["realm"]]["lastScanSecondsPerPage"] = 0.5
+                            data["realm"][download_obj["realm"]]["scanData"] = download_obj["scan_data"]
+                            need_to_update_lua_file = True
                     else:
-                        logger.debug("Donwload block, 'Area 52 - Free-Pick' not in data['realm']")
-                        data["realm"]["Area 52 - Free-Pick"] = {}
-                        data["realm"]["Area 52 - Free-Pick"]["lastCompleteScan"] = last_complete_scan
-                        data["realm"]["Area 52 - Free-Pick"]["lastScanSecondsPerPage"] = 0.5
-                        data["realm"]["Area 52 - Free-Pick"]["scanData"] = scan_data
-                else:
-                    logger.debug("Donwload block, realm not in data")
-                    data["realm"] = {}
-                    data["realm"]["Area 52 - Free-Pick"] = {}
-                    data["realm"]["Area 52 - Free-Pick"]["lastCompleteScan"] = last_complete_scan
-                    data["realm"]["Area 52 - Free-Pick"]["lastScanSecondsPerPage"] = 0.5
-                    data["realm"]["Area 52 - Free-Pick"]["scanData"] = scan_data
+                        logger.debug(f"""Donwload block - realm key not in data, adding it and setting up realm '{download_obj["realm"]}'""")
+                        data["realm"] = {}
+                        data["realm"][download_obj["realm"]] = {}
+                        data["realm"][download_obj["realm"]]["lastCompleteScan"] = download_obj["last_complete_scan"]
+                        data["realm"][download_obj["realm"]]["lastScanSecondsPerPage"] = 0.5
+                        data["realm"][download_obj["realm"]]["scanData"] = download_obj["scan_data"]
+                        need_to_update_lua_file = True
                 
-                prefix = """-- Updated by Ascension TSM Data Sharing App (https://github.com/Seminko/Ascension-TSM-Data-Sharing-App)\nAscensionTSM_AuctionDB = """
-                luadata_serialization.write(lua_file_path, data, encoding="utf-8", indent="\t", prefix=prefix)
-                file_obj = next(f for f in json_file["file_info"] if f["file_path"] == lua_file_path)
-                file_obj["last_modified"] = os_path.getmtime(lua_file_path)
-                need_to_update_json = True
+                if need_to_update_lua_file:
+                    prefix = """-- Updated by Ascension TSM Data Sharing App (https://github.com/Seminko/Ascension-TSM-Data-Sharing-App)\nAscensionTSM_AuctionDB = """
+                    luadata_serialization.write(lua_file_path, data, encoding="utf-8", indent="\t", prefix=prefix)
+                    file_obj = next(f for f in json_file["file_info"] if f["file_path"] == lua_file_path)
+                    file_obj["last_modified"] = os_path.getmtime(lua_file_path)
+                    need_to_update_json = True
         
         if need_to_update_json:
-            realm_dict = next((realm for realm in json_file["latest_data"] if realm["realm"] == "Area 52 - Free-Pick"), None)
-            if realm_dict:
-                realm_dict["last_complete_scan"] = last_complete_scan
-                realm_dict["scan_data"] = scan_data
+            logger.info(f"""Download block - LUA file(s) updated with data for realms: {", ".join(["'" + d["realm"] + "'" for d in downloaded_data])}""")
+            logger.debug("Download block - Json data needs to be updated")
+            for download_obj in downloaded_data:
+                logger.debug(f"""Download block - Checking realms '{download_obj["realm"]}'""")
+                realm_dict = next((realm for realm in json_file["latest_data"] if realm["realm"] == download_obj["realm"]), None)
+                if realm_dict:
+                    logger.debug(f"""Download block - Realm '{download_obj["realm"]}' in json data, updating it""")
+                    realm_dict["last_complete_scan"] = download_obj["last_complete_scan"]
+                    realm_dict["scan_data"] = download_obj["scan_data"]
+                else:
+                    logger.debug(f"""Download block - Realm '{download_obj["realm"]}' not in json data, adding it""")
+                    download_obj["username"] = get_account_name_from_lua_file_path(lua_file_paths[0])
+                    download_obj = {k: download_obj[k] for k in ["realm", "last_complete_scan", "username", "scan_data"]}
+                    json_file["latest_data"].append(download_obj)
             write_json_file(json_file)
-            logger.info("Download block - Completed. All LUA files updated successfully.")
+            logger.debug("Donwload block - json data updated")
         else:
-            logger.info("Donwload block, 'Area 52 - Free-Pick' json data is up-to-date, no need to rewrite it")
+            logger.info("Download block - LUA file(s) are up-to-date for all realms")
+            logger.debug("Donwload block - json data is up-to-date, no need to rewrite it")
     else:
         logger.info("Download block - Ascension is running, skipping download")
     
@@ -413,10 +462,12 @@ def main():
         
         if current_time - last_upload_time >= UPLOAD_INTERVAL_SECONDS:
             upload_data()
+            logger.info("------------------------")
             last_upload_time = current_time
             
         if current_time - last_download_time >= DOWNLOAD_INTERVAL_SECONDS:
             download_data()
+            logger.info("------------------------")
             last_download_time = current_time
 
         interruptible_sleep(5)
@@ -425,5 +476,5 @@ if __name__ == "__main__":
     try:
         main()
     except Exception:
-        logger.exception("An exception occurred")
-        input("An exception occured (see above). Pres any key to close the console")
+        logger.exception("An exception occurred (see above).")
+        input("Press any key to close the console")
