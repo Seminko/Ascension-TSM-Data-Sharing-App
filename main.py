@@ -1,7 +1,8 @@
+from toast_notification import create_update_notification
 from get_wtf_folder import get_wtf_folder
 from save_shortcut import create_shortcut_to_startup
 from hash_username import hash_username
-from get_endpoints import get_upload_endpoint, get_download_endpoint, remove_endpoint_from_str
+from get_endpoints import get_upload_endpoint, get_download_endpoint, remove_endpoint_from_str, get_version_endpoint
 import luadata_serialization
 
 from os import path as os_path, listdir as os_listdir, makedirs as os_makedirs, remove as os_remove
@@ -33,8 +34,7 @@ JSON_PATH = os_path.join(SCRIPT_DIR, JSON_FILE_NAME)
 UPLOAD_INTERVAL_SECONDS = 300
 DOWNLOAD_INTERVAL_SECONDS = 900
 HTTP_TRY_CAP = 5
-upload_tries = 1
-download_tries = 1
+current_tries = {"upload_tries": 1, "download_tries": 1, "check_version_tries": 1}
 REQUEST_TIMEOUT = (60, 180)
 MAX_RETRIES = 7
 RETRY_STRATEGY = Retry(
@@ -64,56 +64,56 @@ def process_response_text(response_text):
     html_css_regex = r'(?:[a-zA-Z0-9-_.]+\s\{.*?\}|\\(?=)|<style>.*<\/style>|<[^<]+?>|^\"|Something went wrong :-\(\s*\.?\s*)'
     return re_sub(new_line_double_space_regex, " ", re_sub(html_css_regex, '', response_text)).strip()
 
-def send_data_to_server(data_to_send):
-    logger.debug("Sending data to server")
-    global upload_tries
-    global session
-    url = get_upload_endpoint()
-    # response = session.post(url, json=data_to_send, timeout=REQUEST_TIMEOUT)
+def make_http_request(purpose, data_to_send=None):
+    global current_tries
+    if purpose == "send_data_to_server":
+        init_debug_log = "Sending data to server"
+        fail_debug_log = "Sending to DB failed"
+        current_tries_key = "upload_tries"
+        url = get_upload_endpoint()
+        request_eval_str = f"session.post('{url}', data=generate_chunks(data_to_send), timeout=REQUEST_TIMEOUT, stream=True)"
+    elif purpose == "get_data_from_server":
+        init_debug_log = "Downloading data from server"
+        fail_debug_log = "Downloading from DB failed"
+        current_tries_key = "download_tries"
+        url = get_download_endpoint()
+        request_eval_str = f"session.get('{url}', timeout=REQUEST_TIMEOUT)"
+    elif purpose == "check_version":
+        init_debug_log = "Checking what is the most up-to-date version"
+        fail_debug_log = "Check most up-to-date version failed"
+        current_tries_key = "check_version_tries"
+        url = get_version_endpoint()
+        request_eval_str = f"session.get('{url}', timeout=REQUEST_TIMEOUT)"
+    
+    logger.debug(init_debug_log)
     try:
-        with session.post(url, data=generate_chunks(data_to_send), timeout=REQUEST_TIMEOUT, stream=True) as response:
+        with eval(request_eval_str) as response:
             if response.status_code == 200:
-                upload_tries = 1
+                current_tries[current_tries_key] = 1
             elif response.status_code == 400:
                 logger.critical(f"{process_response_text(response.text)}")
             else:
                 logger.critical(f"Status code: {response.status_code}")
-                
+    
             response.raise_for_status()
             response_json = response.json()
     except Exception as e:
-        logger.critical("Sending to DB failed")
-        upload_tries += 1
-        if upload_tries > HTTP_TRY_CAP:
+        logger.critical(fail_debug_log)
+        current_tries[current_tries_key] += 1
+        if current_tries[current_tries_key] > HTTP_TRY_CAP:
             raise type(e)(remove_endpoint_from_str(e)) from None
         return None
-        
+    
     return response_json
 
+def send_data_to_server(data_to_send):
+    return make_http_request("send_data_to_server", data_to_send)
+
 def get_data_from_server():
-    logger.debug("Downloading data from server")
-    global download_tries
-    global session
-    url = get_download_endpoint()
-    try:
-        with session.get(url, timeout=REQUEST_TIMEOUT) as response:
-            if response.status_code == 200:
-                download_tries = 1
-            elif response.status_code == 400:
-                logger.critical(f"{process_response_text(response.text)}")
-            else:
-                logger.critical(f"Status code: {response.status_code}")
-    
-            response.raise_for_status()
-            response_json = response.json()
-    except Exception as e:
-        logger.critical("Downloading from DB failed")
-        download_tries += 1
-        if download_tries > HTTP_TRY_CAP:
-            raise type(e)(remove_endpoint_from_str(e)) from None
-        return None
-    
-    return response_json
+    return make_http_request("get_data_from_server")
+
+def get_most_up_to_date_version():
+    return make_http_request("check_version")
     
 def interruptible_sleep(seconds):
     start_time = time_time()
@@ -450,6 +450,12 @@ if "logger" not in globals() and "logger" not in locals():
 
     
 def main():
+    max_version = get_most_up_to_date_version()
+    if max_version["most_recent"] > VERSION:
+        create_update_notification()
+        if max_version["mandatory"]:
+            raise ValueError("There is a MANDATORY newer version of this app. Please download the latest release here: 'https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/releases'")
+    
     if not json_file_initialized():
         initiliaze_json()
     
