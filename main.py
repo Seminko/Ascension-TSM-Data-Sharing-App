@@ -454,7 +454,7 @@ def main():
     if max_version["most_recent"] > VERSION:
         create_update_notification()
         if max_version["mandatory"]:
-            raise ValueError("There is a MANDATORY newer version of this app. Please download the latest release here: 'https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/releases'")
+            raise ValueError("There is a newer MANDATORY version of this app. Please download the latest release here: 'https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/releases'")
     
     if not json_file_initialized():
         initiliaze_json()
