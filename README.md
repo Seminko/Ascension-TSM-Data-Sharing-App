@@ -1,6 +1,6 @@
 # Ascension TSM Data Sharing App
 
-[Trade Skill Master](https://tradeskillmaster.com/) application for [Ascension WoW](https://ascension.gg/).
+[Trade Skill Master](https://tradeskillmaster.com/) data sharing application for [Ascension WoW's](https://ascension.gg/) [TSM Addon](https://github.com/Ascension-Addons/TradeSkillMaster).
 
 &nbsp;
 
