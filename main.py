@@ -1,6 +1,5 @@
 from toast_notification import create_update_notification
 from get_wtf_folder import get_wtf_folder
-from save_shortcut import create_shortcut_to_startup
 from hash_username import hash_username
 from get_endpoints import get_upload_endpoint, get_download_endpoint, remove_endpoint_from_str, get_version_endpoint
 import luadata_serialization
@@ -196,9 +195,6 @@ def get_latest_scans_across_all_accounts_and_realms(file_info):
     return latest_data
 
 def initiliaze_json():
-    startup_folder = create_shortcut_to_startup()
-    logger.info(f"Startup shortcut created: '{startup_folder}'")
-    
     logger.info(f"Initializing '{JSON_FILE_NAME}'")
     wtf_folder = get_wtf_folder()
     logger.info(f"WTF folder found at: '{wtf_folder}'")
@@ -378,6 +374,7 @@ def download_data():
         
         need_to_update_json = False
         need_to_update_lua_file = False
+        updated_realms = set()
         for lua_file_path in lua_file_paths:
             with open(lua_file_path, "r") as outfile:
                 logger.debug(f"Processing '{redact_account_name_from_lua_file_path(lua_file_path)}'")
@@ -395,6 +392,7 @@ def download_data():
                                 data["realm"][download_obj["realm"]]["lastCompleteScan"] = download_obj["last_complete_scan"]
                                 data["realm"][download_obj["realm"]]["scanData"] = download_obj["scan_data"]
                                 need_to_update_lua_file = True
+                                updated_realms.add(download_obj["realm"])
                             else:
                                 logger.debug(f"""'{download_obj["realm"]}' data is up-to-date, no need to rewrite it""")
                                 continue
@@ -405,6 +403,7 @@ def download_data():
                             data["realm"][download_obj["realm"]]["lastScanSecondsPerPage"] = 0.5
                             data["realm"][download_obj["realm"]]["scanData"] = download_obj["scan_data"]
                             need_to_update_lua_file = True
+                            updated_realms.add(download_obj["realm"])
                     else:
                         logger.debug(f"""realm key not in data, adding it and setting up realm '{download_obj["realm"]}'""")
                         data["realm"] = {}
@@ -413,6 +412,7 @@ def download_data():
                         data["realm"][download_obj["realm"]]["lastScanSecondsPerPage"] = 0.5
                         data["realm"][download_obj["realm"]]["scanData"] = download_obj["scan_data"]
                         need_to_update_lua_file = True
+                        updated_realms.add(download_obj["realm"])
                 
                 if need_to_update_lua_file:
                     prefix = """-- Updated by Ascension TSM Data Sharing App (https://github.com/Seminko/Ascension-TSM-Data-Sharing-App)\nAscensionTSM_AuctionDB = """
@@ -422,7 +422,7 @@ def download_data():
                     need_to_update_json = True
         
         if need_to_update_json:
-            logger.info(f"""LUA file(s) updated with data for realms: {", ".join(["'" + d["realm"] + "'" for d in downloaded_data])}""")
+            logger.info(f"""LUA file(s) updated with data for realms: '{", ".join(updated_realms)}'""")
             logger.debug("Json data needs to be updated")
             for download_obj in downloaded_data:
                 logger.debug(f"""Checking realms '{download_obj["realm"]}'""")
@@ -454,7 +454,7 @@ def main():
     if max_version["most_recent"] > VERSION:
         create_update_notification()
         if max_version["mandatory"]:
-            raise ValueError("There is a newer MANDATORY version of this app. Please download the latest release here: 'https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/releases'")
+            raise ValueError("There is a MANDATORY update for this app. Please download the latest release here: 'https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/releases'")
     
     if not json_file_initialized():
         initiliaze_json()
