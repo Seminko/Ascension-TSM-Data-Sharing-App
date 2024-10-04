@@ -135,15 +135,15 @@ def remove_old_logs():
         word = "logs"
         if len(logs_to_remove) == 1:
             word = "log"
-        logger.info(f"Removing {len(logs_to_remove)} oldest {word}") 
+        logger.debug(f"Removing {len(logs_to_remove)} oldest {word}") 
         for log_to_remove in logs_to_remove:
             try:
                 os_remove(log_to_remove)
             except PermissionError as e:
                 logger.debug(f"Removing log '{log_to_remove}' failed due to: '{str(repr(e))}'") 
-        logger.info("------------------------")
     else:
         logger.debug("No logs to be removed")
+    logger.debug("------------------------")
 
 def get_logger():
     # Create a logger
@@ -308,7 +308,7 @@ def upload_data():
                     updated_realms.append(la)
                     
         if updated_realms:
-            dev_server_regex = r"(?i)\b(?:alpha|dev|development|ptr|qa|recording|og 9 classes)\b"
+            dev_server_regex = r"(?i)\b(?:alpha|dev|development|ptr|qa|recording)\b"
             updated_realms_to_send = [r for r in updated_realms if not re_search(dev_server_regex, r["realm"])]
             if updated_realms_to_send:
                 logger.info(f"""New scan timestamp found for realms: {", ".join(["'" + r["realm"] + "'" for r in updated_realms_to_send])}""")
@@ -424,8 +424,8 @@ def download_data():
         if need_to_update_json:
             logger.info(f"""LUA file(s) updated with data for realms: '{", ".join(updated_realms)}'""")
             logger.debug("Json data needs to be updated")
-            for download_obj in downloaded_data:
-                logger.debug(f"""Checking realms '{download_obj["realm"]}'""")
+            for download_obj in [d for d in downloaded_data if d["realm"] in updated_realms]:
+                logger.debug(f"""Checking realm '{download_obj["realm"]}'""")
                 realm_dict = next((realm for realm in json_file["latest_data"] if realm["realm"] == download_obj["realm"]), None)
                 if realm_dict:
                     logger.debug(f"""Realm '{download_obj["realm"]}' in json data, updating it""")
@@ -454,7 +454,9 @@ def main():
     if max_version["most_recent"] > VERSION:
         create_update_notification()
         if max_version["mandatory"]:
-            raise ValueError("There is a MANDATORY update for this app. Please download the latest release here: 'https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/releases'")
+            logger.critical("There is a MANDATORY update for this app. Please download the latest release here: 'https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/releases'")
+            input("Press any key to close the console")
+            sys.exit()
     
     if not json_file_initialized():
         initiliaze_json()
