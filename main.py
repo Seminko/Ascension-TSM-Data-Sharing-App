@@ -1,7 +1,7 @@
+from toast_notification import create_update_notification
 from get_wtf_folder import get_wtf_folder
-from save_shortcut import create_shortcut_to_startup
 from hash_username import hash_username
-from get_endpoints import get_upload_endpoint, get_download_endpoint, remove_endpoint_from_str
+from get_endpoints import get_upload_endpoint, get_download_endpoint, remove_endpoint_from_str, get_version_endpoint
 import luadata_serialization
 
 from os import path as os_path, listdir as os_listdir, makedirs as os_makedirs, remove as os_remove
@@ -33,8 +33,7 @@ JSON_PATH = os_path.join(SCRIPT_DIR, JSON_FILE_NAME)
 UPLOAD_INTERVAL_SECONDS = 300
 DOWNLOAD_INTERVAL_SECONDS = 900
 HTTP_TRY_CAP = 5
-upload_tries = 1
-download_tries = 1
+current_tries = {"upload_tries": 1, "download_tries": 1, "check_version_tries": 1}
 REQUEST_TIMEOUT = (60, 180)
 MAX_RETRIES = 7
 RETRY_STRATEGY = Retry(
@@ -64,56 +63,56 @@ def process_response_text(response_text):
     html_css_regex = r'(?:[a-zA-Z0-9-_.]+\s\{.*?\}|\\(?=)|<style>.*<\/style>|<[^<]+?>|^\"|Something went wrong :-\(\s*\.?\s*)'
     return re_sub(new_line_double_space_regex, " ", re_sub(html_css_regex, '', response_text)).strip()
 
-def send_data_to_server(data_to_send):
-    logger.debug("Sending data to server")
-    global upload_tries
-    global session
-    url = get_upload_endpoint()
-    # response = session.post(url, json=data_to_send, timeout=REQUEST_TIMEOUT)
+def make_http_request(purpose, data_to_send=None):
+    global current_tries
+    if purpose == "send_data_to_server":
+        init_debug_log = "Sending data to server"
+        fail_debug_log = "Sending to DB failed"
+        current_tries_key = "upload_tries"
+        url = get_upload_endpoint()
+        request_eval_str = f"session.post('{url}', data=generate_chunks(data_to_send), timeout=REQUEST_TIMEOUT, stream=True)"
+    elif purpose == "get_data_from_server":
+        init_debug_log = "Downloading data from server"
+        fail_debug_log = "Downloading from DB failed"
+        current_tries_key = "download_tries"
+        url = get_download_endpoint()
+        request_eval_str = f"session.get('{url}', timeout=REQUEST_TIMEOUT)"
+    elif purpose == "check_version":
+        init_debug_log = "Checking what is the most up-to-date version"
+        fail_debug_log = "Check most up-to-date version failed"
+        current_tries_key = "check_version_tries"
+        url = get_version_endpoint()
+        request_eval_str = f"session.get('{url}', timeout=REQUEST_TIMEOUT)"
+    
+    logger.debug(init_debug_log)
     try:
-        with session.post(url, data=generate_chunks(data_to_send), timeout=REQUEST_TIMEOUT, stream=True) as response:
+        with eval(request_eval_str) as response:
             if response.status_code == 200:
-                upload_tries = 1
+                current_tries[current_tries_key] = 1
             elif response.status_code == 400:
                 logger.critical(f"{process_response_text(response.text)}")
             else:
                 logger.critical(f"Status code: {response.status_code}")
-                
+    
             response.raise_for_status()
             response_json = response.json()
     except Exception as e:
-        logger.critical("Sending to DB failed")
-        upload_tries += 1
-        if upload_tries > HTTP_TRY_CAP:
+        logger.critical(fail_debug_log)
+        current_tries[current_tries_key] += 1
+        if current_tries[current_tries_key] > HTTP_TRY_CAP:
             raise type(e)(remove_endpoint_from_str(e)) from None
         return None
-        
+    
     return response_json
 
+def send_data_to_server(data_to_send):
+    return make_http_request("send_data_to_server", data_to_send)
+
 def get_data_from_server():
-    logger.debug("Downloading data from server")
-    global download_tries
-    global session
-    url = get_download_endpoint()
-    try:
-        with session.get(url, timeout=REQUEST_TIMEOUT) as response:
-            if response.status_code == 200:
-                download_tries = 1
-            elif response.status_code == 400:
-                logger.critical(f"{process_response_text(response.text)}")
-            else:
-                logger.critical(f"Status code: {response.status_code}")
-    
-            response.raise_for_status()
-            response_json = response.json()
-    except Exception as e:
-        logger.critical("Downloading from DB failed")
-        download_tries += 1
-        if download_tries > HTTP_TRY_CAP:
-            raise type(e)(remove_endpoint_from_str(e)) from None
-        return None
-    
-    return response_json
+    return make_http_request("get_data_from_server")
+
+def get_most_up_to_date_version():
+    return make_http_request("check_version")
     
 def interruptible_sleep(seconds):
     start_time = time_time()
@@ -136,15 +135,15 @@ def remove_old_logs():
         word = "logs"
         if len(logs_to_remove) == 1:
             word = "log"
-        logger.info(f"Removing {len(logs_to_remove)} oldest {word}") 
+        logger.debug(f"Removing {len(logs_to_remove)} oldest {word}") 
         for log_to_remove in logs_to_remove:
             try:
                 os_remove(log_to_remove)
             except PermissionError as e:
                 logger.debug(f"Removing log '{log_to_remove}' failed due to: '{str(repr(e))}'") 
-        logger.info("------------------------")
     else:
         logger.debug("No logs to be removed")
+    logger.debug("------------------------")
 
 def get_logger():
     # Create a logger
@@ -196,9 +195,6 @@ def get_latest_scans_across_all_accounts_and_realms(file_info):
     return latest_data
 
 def initiliaze_json():
-    startup_folder = create_shortcut_to_startup()
-    logger.info(f"Startup shortcut created: '{startup_folder}'")
-    
     logger.info(f"Initializing '{JSON_FILE_NAME}'")
     wtf_folder = get_wtf_folder()
     logger.info(f"WTF folder found at: '{wtf_folder}'")
@@ -312,7 +308,7 @@ def upload_data():
                     updated_realms.append(la)
                     
         if updated_realms:
-            dev_server_regex = r"(?i)\b(?:alpha|dev|development|ptr|qa|recording|og 9 classes)\b"
+            dev_server_regex = r"(?i)\b(?:alpha|dev|development|ptr|qa|recording)\b"
             updated_realms_to_send = [r for r in updated_realms if not re_search(dev_server_regex, r["realm"])]
             if updated_realms_to_send:
                 logger.info(f"""New scan timestamp found for realms: {", ".join(["'" + r["realm"] + "'" for r in updated_realms_to_send])}""")
@@ -378,6 +374,7 @@ def download_data():
         
         need_to_update_json = False
         need_to_update_lua_file = False
+        updated_realms = set()
         for lua_file_path in lua_file_paths:
             with open(lua_file_path, "r") as outfile:
                 logger.debug(f"Processing '{redact_account_name_from_lua_file_path(lua_file_path)}'")
@@ -395,6 +392,7 @@ def download_data():
                                 data["realm"][download_obj["realm"]]["lastCompleteScan"] = download_obj["last_complete_scan"]
                                 data["realm"][download_obj["realm"]]["scanData"] = download_obj["scan_data"]
                                 need_to_update_lua_file = True
+                                updated_realms.add(download_obj["realm"])
                             else:
                                 logger.debug(f"""'{download_obj["realm"]}' data is up-to-date, no need to rewrite it""")
                                 continue
@@ -405,6 +403,7 @@ def download_data():
                             data["realm"][download_obj["realm"]]["lastScanSecondsPerPage"] = 0.5
                             data["realm"][download_obj["realm"]]["scanData"] = download_obj["scan_data"]
                             need_to_update_lua_file = True
+                            updated_realms.add(download_obj["realm"])
                     else:
                         logger.debug(f"""realm key not in data, adding it and setting up realm '{download_obj["realm"]}'""")
                         data["realm"] = {}
@@ -413,6 +412,7 @@ def download_data():
                         data["realm"][download_obj["realm"]]["lastScanSecondsPerPage"] = 0.5
                         data["realm"][download_obj["realm"]]["scanData"] = download_obj["scan_data"]
                         need_to_update_lua_file = True
+                        updated_realms.add(download_obj["realm"])
                 
                 if need_to_update_lua_file:
                     prefix = """-- Updated by Ascension TSM Data Sharing App (https://github.com/Seminko/Ascension-TSM-Data-Sharing-App)\nAscensionTSM_AuctionDB = """
@@ -422,10 +422,10 @@ def download_data():
                     need_to_update_json = True
         
         if need_to_update_json:
-            logger.info(f"""LUA file(s) updated with data for realms: {", ".join(["'" + d["realm"] + "'" for d in downloaded_data])}""")
+            logger.info(f"""LUA file(s) updated with data for realms: '{", ".join(updated_realms)}'""")
             logger.debug("Json data needs to be updated")
-            for download_obj in downloaded_data:
-                logger.debug(f"""Checking realms '{download_obj["realm"]}'""")
+            for download_obj in [d for d in downloaded_data if d["realm"] in updated_realms]:
+                logger.debug(f"""Checking realm '{download_obj["realm"]}'""")
                 realm_dict = next((realm for realm in json_file["latest_data"] if realm["realm"] == download_obj["realm"]), None)
                 if realm_dict:
                     logger.debug(f"""Realm '{download_obj["realm"]}' in json data, updating it""")
@@ -450,6 +450,14 @@ if "logger" not in globals() and "logger" not in locals():
 
     
 def main():
+    max_version = get_most_up_to_date_version()
+    if max_version["most_recent"] > VERSION:
+        create_update_notification()
+        if max_version["mandatory"]:
+            logger.critical("There is a MANDATORY update for this app. Please download the latest release here: 'https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/releases'")
+            input("Press any key to close the console")
+            sys.exit()
+    
     if not json_file_initialized():
         initiliaze_json()
     
