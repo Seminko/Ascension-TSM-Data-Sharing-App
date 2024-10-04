@@ -2,6 +2,7 @@ from get_wtf_folder import get_wtf_folder
 from save_shortcut import create_shortcut_to_startup
 from hash_username import hash_username
 from get_endpoints import get_upload_endpoint, get_download_endpoint, remove_endpoint_from_str
+from task_scheduler import create_task_from_xml
 import luadata_serialization
 
 from os import path as os_path, listdir as os_listdir, makedirs as os_makedirs, remove as os_remove
@@ -23,9 +24,13 @@ VERSION = "0.11"
 if getattr(sys, 'frozen', False):
     # Running in PyInstaller executable
     SCRIPT_DIR = os_path.dirname(sys.executable)
+    EXE_PATH = sys.executable
 else:
     # Running as a regular Python script
     SCRIPT_DIR = os_path.dirname(os_path.abspath(__file__))
+    EXE_PATH = os_path.abspath(__file__)
+    
+XML_TASK_DEFINITION_PATH = os_path.join(SCRIPT_DIR, "startup_task_definition.xml")
     
 JSON_FILE_NAME = "update_times.json"
 JSON_PATH = os_path.join(SCRIPT_DIR, JSON_FILE_NAME)
@@ -196,6 +201,7 @@ def get_latest_scans_across_all_accounts_and_realms(file_info):
     return latest_data
 
 def initiliaze_json():
+    create_task_from_xml(task_name="TSM Data Sharing App", exe_path=EXE_PATH, working_directory=SCRIPT_DIR, xml_output_path=XML_TASK_DEFINITION_PATH, logger=logger)
     startup_folder = create_shortcut_to_startup()
     logger.info(f"Startup shortcut created: '{startup_folder}'")
     
