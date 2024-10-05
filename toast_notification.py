@@ -31,7 +31,7 @@
 from winrt.windows.ui.notifications import ToastNotificationManager, ToastNotification
 import winrt.windows.data.xml.dom as dom
 
-def create_notification():
+def create_update_notification():
     # Create the toast notifier
     notifier = ToastNotificationManager.create_toast_notifier('Ascension TSM Data Sharing App')
     
@@ -62,5 +62,3 @@ def create_notification():
     
     # Show the toast notification
     notifier.show(ToastNotification(xDoc))
-    
-create_notification()
