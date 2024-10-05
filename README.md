@@ -14,20 +14,15 @@ Periodically checks for a change to scanned data, uploads the latest to the data
 In other words, you will always have access to the most recent prices.<br>
 
 ## What it does - non-TLDR
-When first run, it will create `update_times.json` in the directory where the EXE file is saved which tracks what file got last updated.
-
-It will also create a shortcut to the exe in your Startup folder (this one: `C:\Users\{USERNAME}\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup`). This will ensure the app runs when you turn on your pc.<br>
-If you don't like this and would rather run the app manually, feel free to remove the shortcut - it will not be created again (as long as you don't delete the update_times.json).<br>
-The idea behind it running on startup is due to the fact that we can only update data in the WTF folder when Ascension is not running, because each /reload, logout to char select or game restart automatically writes to the files (ie it would rewrite what we put there). Hence whenever you launch Ascension you will have the latest data there is.
-
-&nbsp;
+When first run, it will ask you whether you want to create a scheduled task to run the app on startup (input Y or N in the console and press Enter). This will happen only when first running the script. The idea behind it running on startup is due to the fact that we can only update data in the WTF folder when Ascension is not running, because each /reload, logout to char select or game restart automatically writes to the files (ie it would rewrite what we put there). Hence whenever you launch Ascension you will have the latest data there is. More info in the FAQ section below.<br>
+When first run, it will also create `update_times.json` in the directory where the EXE file is saved which tracks what LUA file got last updated. Don't mess with this file.
 
 There are two core functionalities:<br>
-- New data download
+- Data download
   - Downloads newest data from the DB.
-  - Happens ONLY when Ascension is not running and is being downloaded every hour.
-- New data upload
-  - When you do a scan, could be partial or full, please do a /reload when you can. This will make the game write to the LUA   file, get detected by the app and uploaded to the DB.
+  - Happens ONLY when Ascension is not running and is being downloaded every 15 minutes.
+- Data upload
+  - When you do a scan, could be partial or full, please do a /reload when you can. This will make the game write to the LUA file, get detected by the app and uploaded to the DB.
   - The script checks for changes every 5 minutes.
 
 &nbsp;
@@ -74,7 +69,7 @@ If an Antivirus blocks the file, put whitelist the folder you saved the EXE to, 
 
 &nbsp;
 
-- Q: The code did not find the WTF folder, then asked me to find it myself. I don't know where it is. Where can I find it?
+- Q: The code did not find the WTF folder, then asked me to find it myself.
 - A: The code will look at the default install location as well as other frequently used. If you used another install loc, you have to find it and select the WTF folder like so:
 ![folder_select](https://github.com/user-attachments/assets/de21a600-1f00-4c40-b91c-47f4f9e53a10)
 
@@ -91,10 +86,21 @@ If an Antivirus blocks the file, put whitelist the folder you saved the EXE to, 
 
 &nbsp;
 
-- Q: Will this support Linux?
-- A: Not sure. I'm losing interested in Ascension atm. If there's enough demand, we'll see.
+- Q: Why a scheduled task and not a shortcut in the Startup folder? That would be easier...
+- A: We tried, however since the app has to run as admin, it will not be launched on startup via a shortcut, hence a scheduled task.
 
 &nbsp;
 
-- Q: What if I reinstal Ascension to other location or mess with Ascension folder structure?
-- A: Just delete `update_times.json`. That will re-trigger "the setup" and will try to find / ask for the WTF folder again.
+- Q: What if I reinstal Ascension to other location, mess with Ascension folder structure, change my mind about running on startup etc?
+- A: Just delete `update_times.json`. That will re-trigger the initial setup.
+
+&nbsp;
+
+- Q: What if I want delete the startup task manually without deleting `update_times.json`?
+- A: Start - find Task Scheduler - select "TSM Data Sharing App" and click Delete:
+![task_scheduler_delete](https://github.com/user-attachments/assets/11a8a17f-d83c-4926-bdf4-e9df4888214f)
+
+&nbsp;
+
+- Q: Will this support Linux?
+- A: Not sure. I'm losing interested in Ascension atm. If there's enough demand, I'll consider it.
