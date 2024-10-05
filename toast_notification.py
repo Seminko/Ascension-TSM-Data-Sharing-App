@@ -37,7 +37,7 @@ def create_update_notification():
     
     # Define the title, description, and URL
     title = "Update Available!"
-    desc = "Click the Download button, GitHub releases page will open in your default browser."
+    desc = "Click the button below, GitHub releases page will open in your default browser."
     url = "https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/releases"
     
     # Toast XML with clickable description (action)
@@ -51,7 +51,7 @@ def create_update_notification():
             </binding>
         </visual>
         <actions>
-            <action content="Open in browser" activationType="protocol" arguments="{url}" />
+            <action content="Go to Github releases" activationType="protocol" arguments="{url}" />
         </actions>
     </toast>
     """
