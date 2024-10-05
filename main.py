@@ -51,6 +51,9 @@ ADAPTER = HTTPAdapter(max_retries=RETRY_STRATEGY)
 
 NUMBER_OF_LOGS_TO_KEEP = 50
 
+APP_NAME = f"Ascension TSM Data Sharing App v{VERSION}"
+SEPARATOR = "---------------------------------------------"
+
 session = requests.Session()
 session.mount("https://", ADAPTER)
 session.mount("http://", ADAPTER)
@@ -147,7 +150,7 @@ def remove_old_logs():
                 logger.debug(f"Removing log '{log_to_remove}' failed due to: '{str(repr(e))}'") 
     else:
         logger.debug("No logs to be removed")
-    logger.debug("------------------------")
+    logger.debug(SEPARATOR)
 
 def get_logger():
     # Create a logger
@@ -213,7 +216,7 @@ def initiliaze_json():
     obj["file_info"] = [{"file_path": f["file_path"], "last_modified": f["last_modified"]} for f in file_info]
     obj["latest_data"] = latest_data
     write_json_file(obj)
-    logger.info("------------------------")
+    logger.info(SEPARATOR)
         
 def write_json_file(json_object):
     logger.debug("Saving json file")
@@ -448,13 +451,15 @@ def download_data():
             logger.debug("json data is up-to-date, no need to rewrite it")
     else:
         logger.info("Ascension is running, skipping download")
-    
+
 
 if "logger" not in globals() and "logger" not in locals():
     logger = get_logger()
 
     
 def main():
+    logger.info(f"{APP_NAME} started")
+    logger.info(SEPARATOR)
     max_version = get_most_up_to_date_version()
     if max_version["most_recent"] > VERSION:
         create_update_notification()
@@ -475,12 +480,12 @@ def main():
         
         if current_time - last_upload_time >= UPLOAD_INTERVAL_SECONDS:
             upload_data()
-            logger.info("------------------------")
+            logger.info(SEPARATOR)
             last_upload_time = current_time
             
         if current_time - last_download_time >= DOWNLOAD_INTERVAL_SECONDS:
             download_data()
-            logger.info("------------------------")
+            logger.info(SEPARATOR)
             last_download_time = current_time
 
         interruptible_sleep(5)
