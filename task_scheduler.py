@@ -2,6 +2,7 @@ import subprocess
 import xml.etree.ElementTree as ET
 from os import remove
 from datetime import datetime
+import re
 
 def create_task_xml(task_name, exe_path, working_directory, xml_path, logger):
     # Root element
@@ -68,8 +69,26 @@ def create_task_xml(task_name, exe_path, working_directory, xml_path, logger):
         tree.write(xml_file, encoding='utf-16', xml_declaration=True)
 
     logger.debug(f"XML file '{xml_path}' created successfully.")
+    
+def delete_task(task_name, logger):
+    new_line_regex = r"(?:\n+|\s\s+)"
+    try:
+        # Delete the task from Task Scheduler
+        result = subprocess.run([
+            'schtasks', '/delete',
+            '/tn', task_name,
+            '/f'  # Force deletion without confirmation
+        ], capture_output=True, text=True, check=True)
+        if not "successfully deleted" in result.stdout:
+            raise Exception(result.stdout)
+        logger.debug(f"Scheduled task '{task_name}' deleted successfully.")
+    except subprocess.CalledProcessError as e:
+        logger.debug(f"""Failed to delete startup task. Error: '{re.sub(new_line_regex, " ", e.stderr).strip()}'""")
+    except Exception as e:
+        logger.debug(f"Failed to delete startup task. Error: '{str(repr(e))}'")
 
 def create_task_from_xml(task_name, exe_path, working_directory, xml_path, logger):
+    new_line_regex = r"(?:\n+|\s\s+)"
     input_result = input("Would you like to create a scheduled task so that the app runs on startup? [Y/N]: ")
     if input_result.lower() in ["y", "yes", "ye", "ya", "ys", "yea", "yeh" "yeah"]:
         create_task_xml(task_name, exe_path, working_directory, xml_path, logger)
@@ -82,10 +101,10 @@ def create_task_from_xml(task_name, exe_path, working_directory, xml_path, logge
                 '/f'                   # Force creation (overwrite if exists)
             ], capture_output=True, text=True, check=True)
             if not "successfully been created" in result.stdout:
-                raise Exception(result.stdout)
+                raise Exception(re.sub(new_line_regex, " ", result.stdout).strip())
             logger.info(f"Scheduled task '{task_name}' created successfully")
         except subprocess.CalledProcessError as e:
-            logger.error(f"Failed to create startup task. Error: '{e.stderr}'")
+            logger.error(f"""Failed to create startup task. Error: '{re.sub(new_line_regex, " ", e.stderr).strip()}'""")
         except Exception as e:
             logger.error(f"Failed to create startup task. Error: '{str(repr(e))}'")
         finally:
@@ -97,17 +116,6 @@ def create_task_from_xml(task_name, exe_path, working_directory, xml_path, logge
                 logger.debug(f"Removing xml '{xml_path}' failed due to: 'FileNotFoundError'")
                 pass
     else:
-        logger.debug(f"User input was '{input_result}' - not creating task")
+        logger.debug(f"User input was '{input_result}' - trying to delete the task (in case it already exists and the setup was re-triggered)")
+        delete_task(task_name, logger)
     
-# "USERS WILL DELETE THE TASK MANUALLY"
-# def delete_task(task_name, logger):
-#     try:
-#         # Delete the task from Task Scheduler
-#         subprocess.run([
-#             'schtasks', '/delete',
-#             '/tn', task_name,
-#             '/f'  # Force deletion without confirmation
-#         ], check=True)
-#         logger.info(f"Task '{task_name}' deleted successfully.")
-#     except subprocess.CalledProcessError as e:
-#         logger.error(f"Failed to delete task. Error: {e}")
