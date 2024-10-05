@@ -19,7 +19,7 @@ import io
 import json
 
 
-VERSION = "0.11"
+VERSION = "0.12"
 
 if getattr(sys, 'frozen', False):
     # Running in PyInstaller executable
@@ -201,7 +201,7 @@ def get_latest_scans_across_all_accounts_and_realms(file_info):
     return latest_data
 
 def initiliaze_json():
-    create_task_from_xml(task_name="TSM Data Sharing App", exe_path=EXE_PATH, working_directory=SCRIPT_DIR, xml_output_path=XML_TASK_DEFINITION_PATH, logger=logger)
+    create_task_from_xml(task_name="TSM Data Sharing App", exe_path=EXE_PATH, working_directory=SCRIPT_DIR, xml_path=XML_TASK_DEFINITION_PATH, logger=logger)
     startup_folder = create_shortcut_to_startup()
     logger.info(f"Startup shortcut created: '{startup_folder}'")
     

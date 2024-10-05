@@ -71,7 +71,7 @@ def create_task_xml(task_name, exe_path, working_directory, xml_path, logger):
 
 def create_task_from_xml(task_name, exe_path, working_directory, xml_path, logger):
     input_result = input("Would you like to create a scheduled task so that the app runs on startup? [Y/N]: ")
-    if input_result.lower() in ["y", "yes", "ys"]:
+    if input_result.lower() in ["y", "yes", "ye", "ya", "ys", "yea", "yeh" "yeah"]:
         create_task_xml(task_name, exe_path, working_directory, xml_path, logger)
         try:
             # Create the task from the XML configuration file
@@ -81,16 +81,21 @@ def create_task_from_xml(task_name, exe_path, working_directory, xml_path, logge
                 '/xml', xml_path,      # Path to the XML file
                 '/f'                   # Force creation (overwrite if exists)
             ], capture_output=True, text=True, check=True)
-            if "successfully been created" not in result.stdout:
-                raise Exception(f"Failed to create task. Error: '{result.stdout}'")
+            if not "successfully been created" in result.stdout:
+                raise Exception(result.stdout)
             logger.info(f"Scheduled task '{task_name}' created successfully")
         except subprocess.CalledProcessError as e:
-            logger.error(f"Failed to create task. Error: '{e.stderr}'")
+            logger.error(f"Failed to create startup task. Error: '{e.stderr}'")
+        except Exception as e:
+            logger.error(f"Failed to create startup task. Error: '{str(repr(e))}'")
         finally:
             try:
                 remove(xml_path)
             except PermissionError as e:
-                logger.debug(f"Removing xml '{xml_path}' failed due to: '{str(repr(e))}'") 
+                logger.debug(f"Removing xml '{xml_path}' failed due to: '{str(repr(e))}'")
+            except FileNotFoundError:
+                logger.debug(f"Removing xml '{xml_path}' failed due to: 'FileNotFoundError'")
+                pass
     else:
         logger.debug(f"User input was '{input_result}' - not creating task")
     
