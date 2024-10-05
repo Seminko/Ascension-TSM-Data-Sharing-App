@@ -102,5 +102,15 @@ If an Antivirus blocks the file, put whitelist the folder you saved the EXE to, 
 
 &nbsp;
 
+- Q: How do I know which version of the app I have?
+- A: Check the log files. The naming convention is `ascension_tsm_data_sharing_app_v{VERSION}_{YEARMONTHDAY_HOURMINUTESECOND}.log`
+
+&nbsp;
+
+- Q: Why not put the version in the name of the exe?
+- A: Due to the scheduled task. Once upgraded, the file name in the task scheduler would still point to the old file, so you would have to re-trigger the initial setup.
+
+&nbsp;
+
 - Q: Will this support Linux?
 - A: Not sure. I'm losing interested in Ascension atm. If there's enough demand, I'll consider it.
