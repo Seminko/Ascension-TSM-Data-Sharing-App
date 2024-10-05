@@ -2,6 +2,8 @@
 
 [Trade Skill Master](https://tradeskillmaster.com/) data sharing application for [Ascension WoW's](https://ascension.gg/) [TSM Addon](https://github.com/Ascension-Addons/TradeSkillMaster).
 
+You can get a hold of me on [SzylerAddons Discord](https://discord.gg/uTxuDvuHcn) (Addons from Szyler and co --> #tsm-data-sharing) - @the_real_mortificator.
+
 &nbsp;
 
 > [!CAUTION]
@@ -54,11 +56,11 @@ There are two core functionalities:<br>
 - Q: Windows defender says it protected my PC / My Antivirus moved the file to quarantine! I knew it!
 - A: Windows defender will flag all unsigned apps. To get the app signed requires a form of approval, which you have to request. It takes time and costs money (there is a free version but each code change would have to be approved again an again, and we would wait again and again). Antivirus software works similarly. Also, since we have a single EXE, the compiler has to include all the dependencies (ie modules / libraries like the re module used for regex) into the single file and WD / Antivirus don't like that because viruses / malware do the same. However, you can see 99% of the code here on GitHub so those who can read python can confirm there's nothing nefarious going on here. (The last 1% is explained in the point below)
 
-To allow this file in Windows Defender, do this:
+To allow this file in Windows Defender, do this:<br>
 ![windows-defender_updated](https://github.com/user-attachments/assets/f8a023cd-5a8e-4202-9df8-b07889711eb6)
 
-If an Antivirus blocks the file, put whitelist the folder you saved the EXE to, eg:
-![image](https://github.com/user-attachments/assets/17e55557-479a-4574-9664-de7ba3ab3f19)
+If an Antivirus blocks the file, put whitelist the folder you saved the EXE to, eg:<br>
+![image](https://github.com/user-attachments/assets/17e55557-479a-4574-9664-de7ba3ab3f19)<br>
 ![image](https://github.com/user-attachments/assets/bcbf156d-8f6e-47ed-88d5-d60f20dcdbfc)
 
 
@@ -70,7 +72,7 @@ If an Antivirus blocks the file, put whitelist the folder you saved the EXE to, 
 &nbsp;
 
 - Q: The code did not find the WTF folder, then asked me to find it myself.
-- A: The code will look at the default install location as well as other frequently used. If you used another install loc, you have to find it and select the WTF folder like so:
+- A: The code will look at the default install location as well as other frequently used. If you used another install loc, you have to find it and select the WTF folder like so:<br>
 ![folder_select](https://github.com/user-attachments/assets/de21a600-1f00-4c40-b91c-47f4f9e53a10)
 
 
@@ -97,7 +99,7 @@ If an Antivirus blocks the file, put whitelist the folder you saved the EXE to, 
 &nbsp;
 
 - Q: What if I want delete the startup task manually without deleting `update_times.json`?
-- A: Start - find Task Scheduler - select "TSM Data Sharing App" and click Delete:
+- A: Start - find Task Scheduler - select "TSM Data Sharing App" and click Delete:<br>
 ![task_scheduler_delete](https://github.com/user-attachments/assets/11a8a17f-d83c-4926-bdf4-e9df4888214f)
 
 &nbsp;
@@ -109,6 +111,17 @@ If an Antivirus blocks the file, put whitelist the folder you saved the EXE to, 
 
 - Q: Why not put the version in the name of the exe?
 - A: Due to the scheduled task. Once upgraded, the file name in the task scheduler would still point to the old file, so you would have to re-trigger the initial setup.
+
+&nbsp;
+
+- Q: How do I know there is a new release? Do I have to keep checking github?
+- A: No you don't. When there's a new version, windows' toast notification will let you know, with a convenient button that brings you directly to the release section here.<br>
+![toast_notif](https://github.com/user-attachments/assets/1323bc01-8eda-4a2c-bda4-38086048bf66)
+
+&nbsp;
+
+- Q: The app crashed on me / apparently doesn't work as intended. What should I do?
+- A: Definitely report it. Create an issue here, if you have a github account, or alternatively you can try [SzylerAddons Discord](https://discord.gg/uTxuDvuHcn) --> Addons from Szyler and co --> #tsm-data-sharing. Either way, describe the issue in detail and include logs. For questions head to Discord.
 
 &nbsp;
 
