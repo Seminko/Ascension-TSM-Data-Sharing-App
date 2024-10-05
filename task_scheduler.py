@@ -99,7 +99,7 @@ def create_task_from_xml(task_name, exe_path, working_directory, xml_path, logge
     else:
         logger.debug(f"User input was '{input_result}' - not creating task")
     
-
+# "USERS WILL DELETE THE TASK MANUALLY"
 # def delete_task(task_name, logger):
 #     try:
 #         # Delete the task from Task Scheduler
@@ -111,10 +111,3 @@ def create_task_from_xml(task_name, exe_path, working_directory, xml_path, logge
 #         logger.info(f"Task '{task_name}' deleted successfully.")
 #     except subprocess.CalledProcessError as e:
 #         logger.error(f"Failed to delete task. Error: {e}")
-
-
-# # Example usage
-# task_name = "TSM Data Sharing App"
-# working_directory = SCRIPT_DIR
-# exe_path = EXE_PATH
-# xml_output_path = r"G:\Python\Ascension TSM sharer\task_config.xml"
