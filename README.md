@@ -105,7 +105,7 @@ If an Antivirus blocks the file, put whitelist the folder you saved the EXE to, 
 &nbsp;
 
 - Q: How do I know which version of the app I have?
-- A: Check the log files. The naming convention is `ascension_tsm_data_sharing_app_v{VERSION}_{YEARMONTHDAY_HOURMINUTESECOND}.log`
+- A: Hover over the exe. Or right click it and select Properties and then check the metadata in the Details tab. Or just check the log files - the naming convention is `ascension_tsm_data_sharing_app_v{VERSION}_{YEARMONTHDAY_HOURMINUTESECOND}.log`
 
 &nbsp;
 
