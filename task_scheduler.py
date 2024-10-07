@@ -3,6 +3,7 @@ import xml.etree.ElementTree as ET
 from os import remove
 from datetime import datetime
 import re
+from time import strftime as time_strftime
 
 def create_task_xml(task_name, exe_path, working_directory, xml_path, logger):
     # Root element
@@ -96,7 +97,7 @@ def delete_task(task_name, logger):
 
 def create_task_from_xml(task_name, exe_path, working_directory, xml_path, logger):
     new_line_regex = r"(?:\n+|\s\s+)"
-    input_result = input("Would you like to create a scheduled task so that the app runs on startup? [Y/N]: ")
+    input_result = input(f"{time_strftime('%Y-%m-%d %H:%M:%S,%MS')} - Would you like to create a scheduled task so that the app runs on startup? [Y/N]: ")
     logger.debug(f"User entered: '{input_result}'")
     if input_result.lower() in ["y", "yes", "ye", "ya", "ys", "yea", "yeh" "yeah"]:
         create_task_xml(task_name, exe_path, working_directory, xml_path, logger)
