@@ -31,18 +31,25 @@
 from winrt.windows.ui.notifications import ToastNotificationManager, ToastNotification
 import winrt.windows.data.xml.dom as dom
 
-def create_update_notification():
+def create_update_notification(mandatory=False):
     # Create the toast notifier
     notifier = ToastNotificationManager.create_toast_notifier('Ascension TSM Data Sharing App')
     
     # Define the title, description, and URL
-    title = "Update Available!"
-    desc = "Click the button below, GitHub releases page will open in your default browser."
-    url = "https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/releases"
+    if mandatory:
+        title = "⚠️ MANDATORY UPDATE ⚠️"
+        desc = "App WILL NOT run until you update!\nClick the button below, GitHub releases page will open in your default browser."
+        url = "https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/releases"
+        scenario = " scenario='urgent'"
+    else:
+        title = "Update Available!"
+        desc = "Click the button below, GitHub releases page will open in your default browser."
+        url = "https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/releases"
+        scenario = ""
     
     # Toast XML with clickable description (action)
     tString = f"""
-    <toast duration='long' scenario='urgent'>
+    <toast duration='long'{scenario}>
         <audio src='ms-winsoundevent:Notification.Looping.Call10' loop='false' silent='false'/>
         <visual>
             <binding template='ToastText02'>
