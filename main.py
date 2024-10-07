@@ -18,7 +18,7 @@ import io
 import json
 import sys
 
-VERSION = "0.13"
+VERSION = "0.11"
 
 if getattr(sys, 'frozen', False):
     # Running in PyInstaller executable
@@ -473,8 +473,13 @@ def main():
     logger.info(SEPARATOR)
     max_version = get_most_up_to_date_version()
     if max_version["most_recent"] > VERSION:
-        create_update_notification()
         if max_version["mandatory"]:
+            create_update_notification(mandatory=True)
+            logger.critical("There is a MANDATORY update for this app. Please download the latest release here: 'https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/releases'")
+            input("Press any key to close the console")
+            sys.exit()
+        else:
+            create_update_notification(mandatory=False)
             logger.critical("There is a MANDATORY update for this app. Please download the latest release here: 'https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/releases'")
             input("Press any key to close the console")
             sys.exit()
