@@ -14,11 +14,11 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from re import sub as re_sub, search as re_search
 from psutil import process_iter
-import sys
 import io
 import json
+import sys
 
-VERSION = "0.12"
+VERSION = "0.13"
 
 if getattr(sys, 'frozen', False):
     # Running in PyInstaller executable
@@ -137,7 +137,7 @@ def remove_old_logs():
     file_list = get_files(dst_folder)
     if len(file_list) > NUMBER_OF_LOGS_TO_KEEP:
         full_path_list = [dst_folder + "\\" + i for i in file_list]
-        full_path_list.sort()
+        full_path_list.sort(key=os_path.getmtime, reverse=True)
         logs_to_remove = full_path_list[NUMBER_OF_LOGS_TO_KEEP:]
         word = "logs"
         if len(logs_to_remove) == 1:
@@ -278,7 +278,8 @@ def get_tsm_auctiondb_lua_files(wtf_folder):
         raise ValueError(f"Couldn't find 'TradeSkillMaster_AuctionDB.lua' in any of the following locations: {str(file_path_list)}. Check if TSM is installed and if so, run a full scan first.")
 
 def upload_data():
-    logger.info("UPLOAD BLOCK")
+    ret = False
+    logger.debug("UPLOAD BLOCK")
     
     lua_file_paths, json_file = get_lua_file_paths()
     
@@ -297,12 +298,12 @@ def upload_data():
         full_file_info = get_lua_file_path_info(lua_file_paths)
         
         if files_new:
-            logger.info("New LUA file(s) detected")
+            logger.info("Upload block - New LUA file(s) detected")
             file_info_new_files = [{"file_path": f["file_path"], "last_modified": f["last_modified"]} for f in full_file_info if f["file_path"] in files_new]
             json_file["file_info"].extend(file_info_new_files)
         
         if files_updated:
-            logger.info("Changes to LUA file(s) detected")
+            logger.debug("Changes to LUA file(s) detected")
             json_file["file_info"] = [o for o in json_file["file_info"] if o not in files_updated]
             file_info_updated_files = [f for f in full_file_info if f["file_path"] in [f["file_path"] for f in files_updated]]
             json_file["file_info"].extend([{"file_path": f["file_path"], "last_modified": f["last_modified"]} for f in file_info_updated_files])
@@ -319,22 +320,23 @@ def upload_data():
             dev_server_regex = r"(?i)\b(?:alpha|dev|development|ptr|qa|recording)\b"
             updated_realms_to_send = [r for r in updated_realms if not re_search(dev_server_regex, r["realm"])]
             if updated_realms_to_send:
-                logger.info(f"""New scan timestamp found for realms: {", ".join(["'" + r["realm"] + "'" for r in updated_realms_to_send])}""")
+                logger.info(f"""Upload block - New scan timestamp found for realms: {", ".join(["'" + r["realm"] + "'" for r in updated_realms_to_send])}""")
                 for r in updated_realms_to_send:
                     r["username"] = hash_username(r["username"])
 
                 data_to_send_json_string = json.dumps(updated_realms_to_send)
                 data_to_send_bytes = io.BytesIO(data_to_send_json_string.encode('utf-8'))
-                logger.info("Sending data")
+                logger.debug("Sending data")
                 import_result = send_data_to_server(data_to_send_bytes)
             
                 if not import_result:
-                    logger.warning("Upload failed silenty. Will retry")
-                    return
+                    logger.warning("Upload block - Upload failed silenty. Will retry")
+                    return ret
                 
-                logger.info("" + import_result['message'])
+                logger.info("Upload block - " + import_result['message'])
+                ret = True
             else:
-                logger.info("New scan timestamp found but only for Dev/PTR/QA etc servers, ignoring")
+                logger.debug("New scan timestamp found but only for Dev/PTR/QA etc servers, ignoring")
             
             for r in updated_realms:
                 json_file_obj = next((l for l in json_file["latest_data"] if l["realm"] == r["realm"]), None)
@@ -347,9 +349,11 @@ def upload_data():
             interruptible_sleep(15) # allow for server-side file generation
         else:
             write_json_file(json_file)
-            logger.info("Despite LUA file(s) being updated, there are no new scan timestamps")
+            logger.info("Upload block - Despite LUA file(s) being updated, there are no new scan timestamps")
     else:
-        logger.info("No changes detected in LUA file(s)")
+        logger.debug("No changes detected in LUA file(s)")
+        
+    return ret
 
 def is_ascension_running():
     logger.debug("Checking if Ascension is running")
@@ -372,12 +376,13 @@ def get_account_name_from_lua_file_path(lua_file_path):
     return None
 
 def download_data():
-    logger.info("DOWNLOAD BLOCK")
+    ret = False
+    logger.debug("DOWNLOAD BLOCK")
     if not is_ascension_running():
         downloaded_data = get_data_from_server()
         if not downloaded_data:
             logger.warning("Download failed silenty. Will retry")
-            return
+            return ret
         lua_file_paths, json_file = get_lua_file_paths()
         
         need_to_update_json = False
@@ -413,7 +418,7 @@ def download_data():
                             need_to_update_lua_file = True
                             updated_realms.add(download_obj["realm"])
                     else:
-                        logger.debug(f"""realm key not in data, adding it and setting up realm '{download_obj["realm"]}'""")
+                        logger.debug(f"""'realm' key not in data, adding it and setting up realm '{download_obj["realm"]}'""")
                         data["realm"] = {}
                         data["realm"][download_obj["realm"]] = {}
                         data["realm"][download_obj["realm"]]["lastCompleteScan"] = download_obj["last_complete_scan"]
@@ -430,7 +435,8 @@ def download_data():
                     need_to_update_json = True
         
         if need_to_update_json:
-            logger.info(f"""LUA file(s) updated with data for realms: '{", ".join(updated_realms)}'""")
+            ret = True
+            logger.info(f"""Download block - LUA file(s) updated with data for realms: '{", ".join(updated_realms)}'""")
             logger.debug("Json data needs to be updated")
             for download_obj in [d for d in downloaded_data if d["realm"] in updated_realms]:
                 logger.debug(f"""Checking realm '{download_obj["realm"]}'""")
@@ -447,15 +453,20 @@ def download_data():
             write_json_file(json_file)
             logger.debug("json data updated")
         else:
-            logger.info("LUA file(s) are up-to-date for all realms")
+            logger.debug("LUA file(s) are up-to-date for all realms")
             logger.debug("json data is up-to-date, no need to rewrite it")
     else:
-        logger.info("Ascension is running, skipping download")
+        logger.debug("Ascension is running, skipping download")
+    
+    return ret
 
 
 if "logger" not in globals() and "logger" not in locals():
     logger = get_logger()
 
+def clear_message(msg):
+    sys.stdout.write('\r' + ' ' * len(msg) + '\r')
+    sys.stdout.flush()
     
 def main():
     logger.info(f"{APP_NAME} started")
@@ -475,24 +486,39 @@ def main():
     
     last_upload_time = 0
     last_download_time = 0
+    loading_chars = ["[   ]","[=  ]","[== ]","[===]","[ ==]","[  =]"]
+    loading_char_idx = 0
+    msg = ""
     while True:
         current_time = time_time()
         
         if current_time - last_upload_time >= UPLOAD_INTERVAL_SECONDS:
-            upload_data()
-            logger.info(SEPARATOR)
+            clear_message(msg)
+            ret = upload_data()
+            if ret:
+                logger.info(SEPARATOR)
+            else:
+                logger.debug(SEPARATOR)
             last_upload_time = current_time
-            
+        
         if current_time - last_download_time >= DOWNLOAD_INTERVAL_SECONDS:
-            download_data()
-            logger.info(SEPARATOR)
+            clear_message(msg)
+            ret = download_data()
+            if ret:
+                logger.info(SEPARATOR)
+            else:
+                logger.debug(SEPARATOR)
             last_download_time = current_time
-
-        interruptible_sleep(5)
+        
+        msg = time_strftime("%Y-%m-%d %H:%M:%S,%MS") + " - " + loading_chars[loading_char_idx % len(loading_chars)] + " - Detecting changes (Next upload in " + str(round((UPLOAD_INTERVAL_SECONDS - (current_time - last_upload_time))/60, 1)) + "min / Next download in " + str(round((DOWNLOAD_INTERVAL_SECONDS - (current_time - last_download_time))/60,1)) + "min)"
+        sys.stdout.write('\r' + msg)
+        sys.stdout.flush()
+        loading_char_idx += 1
+        time_sleep(0.5)
         
 if __name__ == "__main__":
     try:
         main()
     except Exception:
-        logger.exception("An exception occurred (see above).")
+        logger.exception("An exception occurred. Please send the logs to Mortificator on Discord (https://discord.gg/uTxuDvuHcn --> Addons from Szyler and co --> #tsm-data-sharing - tag @Mortificator) or create an issue on Github (https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/issues)")
         input("Press any key to close the console")
