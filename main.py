@@ -18,7 +18,7 @@ import io
 import json
 import sys
 
-VERSION = "0.11"
+VERSION = "0.13"
 
 if getattr(sys, 'frozen', False):
     # Running in PyInstaller executable
