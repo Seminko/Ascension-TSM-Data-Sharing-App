@@ -349,7 +349,7 @@ def upload_data():
             interruptible_sleep(15) # allow for server-side file generation
         else:
             write_json_file(json_file)
-            logger.info("Upload block - Despite LUA file(s) being updated, there are no new scan timestamps")
+            logger.debug("Upload block - Despite LUA file(s) being updated, there are no new scan timestamps")
     else:
         logger.debug("No changes detected in LUA file(s)")
         
