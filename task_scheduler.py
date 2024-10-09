@@ -113,9 +113,11 @@ def create_task_from_xml(task_name, exe_path, working_directory, xml_path, logge
                 raise Exception(re.sub(new_line_regex, " ", result.stdout).strip())
             logger.info(f"Scheduled task '{task_name}' created successfully")
         except subprocess.CalledProcessError as e:
-            logger.error(f"""Failed to create startup task. Error: '{re.sub(new_line_regex, " ", e.stderr).strip()}'""")
+            logger.critical(f"""Failed to create startup task. Error: '{re.sub(new_line_regex, " ", e.stderr).strip()}'""")
+            logger.exception("Handled exception")
         except Exception as e:
-            logger.error(f"Failed to create startup task. Error: '{str(repr(e))}'")
+            logger.critical(f"Failed to create startup task. Error: '{str(repr(e))}'")
+            logger.exception("Handled exception")
         finally:
             try:
                 remove(xml_path)

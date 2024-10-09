@@ -18,7 +18,7 @@ import io
 import json
 import sys
 
-VERSION = "0.13"
+VERSION = "0.14"
 
 if getattr(sys, 'frozen', False):
     # Running in PyInstaller executable
@@ -118,7 +118,7 @@ def send_data_to_server(data_to_send):
 def get_data_from_server():
     return make_http_request("get_data_from_server")
 
-def get_most_up_to_date_version():
+def get_version_list():
     return make_http_request("check_version")
     
 def interruptible_sleep(seconds):
@@ -152,6 +152,11 @@ def remove_old_logs():
         logger.debug("No logs to be removed")
     logger.debug(SEPARATOR)
 
+class NoExceptionFilter(logging.Filter):
+    def filter(self, record):
+        # If the log record is at EXCEPTION level, filter it out (return False)
+        return not record.exc_info
+    
 def get_logger():
     # Create a logger
     logger = logging.getLogger(__name__)
@@ -160,6 +165,7 @@ def get_logger():
     # Console handler with INFO level
     console_handler = logging.StreamHandler()
     console_handler.setLevel(logging.INFO)
+    console_handler.addFilter(NoExceptionFilter())
     console_formatter = logging.Formatter('%(asctime)s - %(message)s')
     console_handler.setFormatter(console_formatter)
     logger.addHandler(console_handler)
@@ -471,16 +477,17 @@ def clear_message(msg):
 def main():
     logger.info(f"{APP_NAME} started")
     logger.info(SEPARATOR)
-    max_version = get_most_up_to_date_version()
-    if max_version["most_recent"] > VERSION:
-        if max_version["mandatory"]:
+    version_list = get_version_list()
+    newer_versions = [v for k, v in version_list.items() if k > VERSION]
+    if newer_versions:
+        if any(newer_versions):
             create_update_notification(mandatory=True)
             logger.critical("There is a MANDATORY update for this app. Please download the latest release here: 'https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/releases'")
             input("Press any key to close the console")
             sys.exit()
         else:
             create_update_notification(mandatory=False)
-            logger.critical("There is a MANDATORY update for this app. Please download the latest release here: 'https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/releases'")
+            logger.critical("There is an update for this app. Please download the latest release here: 'https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/releases'")
             input("Press any key to close the console")
             sys.exit()
     
@@ -515,6 +522,7 @@ def main():
                 logger.debug(SEPARATOR)
             last_download_time = current_time
         
+        clear_message(msg)
         msg = time_strftime("%Y-%m-%d %H:%M:%S,%MS") + " - " + loading_chars[loading_char_idx % len(loading_chars)] + " - Detecting changes (Next upload in " + str(round((UPLOAD_INTERVAL_SECONDS - (current_time - last_upload_time))/60, 1)) + "min / Next download in " + str(round((DOWNLOAD_INTERVAL_SECONDS - (current_time - last_download_time))/60,1)) + "min)"
         sys.stdout.write('\r' + msg)
         sys.stdout.flush()
@@ -525,5 +533,6 @@ if __name__ == "__main__":
     try:
         main()
     except Exception:
-        logger.exception("An exception occurred. Please send the logs to Mortificator on Discord (https://discord.gg/uTxuDvuHcn --> Addons from Szyler and co --> #tsm-data-sharing - tag @Mortificator) or create an issue on Github (https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/issues)")
+        logger.critical("An exception occurred. Please send the logs to Mortificator on Discord (https://discord.gg/uTxuDvuHcn --> Addons from Szyler and co --> #tsm-data-sharing - tag @Mortificator) or create an issue on Github (https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/issues)")
+        logger.exception("Exception")
         input("Press any key to close the console")
