@@ -67,7 +67,7 @@ UPLOAD_STATS_ACHIEVEMENTS = {
     25: "ACHIEVEMENT UNLOCKED! Twenty five uploads. Respectable!",
     50: "ACHIEVEMENT UNLOCKED! Number of uploads - half a hundred. You rock!",
     100: "ACHIEVEMENT UNLOCKED! Hundred uploads??? Epic!",
-    1000: "ACHIEVEMENT UNLOCKED! A thousand successful uploads. We're getting into a legendary territory!",
+    1000: "ACHIEVEMENT UNLOCKED! A thousand successful uploads. We're getting into legendary territory!",
     10000: "ACHIEVEMENT UNLOCKED! TEN THOUSAND! OK, consider yourself a LEGEND!",
     100000: "ACHIEVEMENT UNLOCKED! Hundred thousand? I mean, other players love you for this, but if you continue I think we're gonna have to have an intervention :-P",
     1000000: "ACHIEVEMENT UNLOCKED! MEGA! I mean a million. You're now on par with the Emperor of Mankind. Something tells me we forgot about that intervention...",
@@ -537,7 +537,7 @@ def check_for_new_versions():
 def app_start_logging():
     logger.info(f"{APP_NAME} started")
     logger.info(SEPARATOR)
-    logger.info("Make sure you have Notifications enabled so that you know when there is an update. (Check FAQ on GitHub for how to do that.")
+    logger.info("Make sure you have Notifications enabled so that you know when there is an update. (Check FAQ on GitHub for how to do that.)")
     logger.info("Don't be a scrub and upload frequently!")
     logger.info(SEPARATOR)
     
@@ -557,6 +557,7 @@ def main():
     last_download_time = 0
     ascension_started_running = 0
     upload_reminder_given = False
+    upload_reminder_given_time = 0
     last_update_check = time_time()
     
     loading_chars = ["[   ]","[=  ]","[== ]","[===]","[ ==]","[  =]"]
@@ -573,10 +574,14 @@ def main():
         if is_ascension_running() and ascension_started_running == 0:
             ascension_started_running = time_time()
             
-        if current_time - ascension_started_running >= UPLOAD_REMINDER_INTERVAL_SECONDS and last_successful_upload == 0 and upload_reminder_given == False:
+        if upload_reminder_given and (current_time - upload_reminder_given_time) > 86400:
+            upload_reminder_given = False
+            
+        if ascension_started_running != 0 and current_time - ascension_started_running >= UPLOAD_REMINDER_INTERVAL_SECONDS and last_successful_upload == 0 and upload_reminder_given == False:
             logger.critical(f"You have been playing for more than {int((current_time - ascension_started_running)/60/60)} hours. Please consider doing an AH scan and /reload-ing to trigger DB upload. Thanks! <3")
             create_upload_reminder_notification(current_time - ascension_started_running)
             upload_reminder_given = True
+            upload_reminder_given_time = time_time()
         
         if current_time - last_upload_time >= UPLOAD_INTERVAL_SECONDS:
             clear_message(msg)
