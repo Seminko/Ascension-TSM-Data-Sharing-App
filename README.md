@@ -115,7 +115,7 @@ If an Antivirus blocks the file, put whitelist the folder you saved the EXE to, 
 &nbsp;
 
 - Q: How do I know there is a new release? Do I have to keep checking github?
-- A: No you don't. When there's a new version, windows' toast notification will let you know, with a convenient button that brings you directly to the release section here.<br>
+- A: No you don't. When there's a new version, the app will let you know directly in the console as well as with a windows' toast notification with a convenient button that brings you directly to the release section here. To do so, go to Start - Notifications & Actions - Notifications - Enable.<br>
 ![toast_notif](https://github.com/user-attachments/assets/1323bc01-8eda-4a2c-bda4-38086048bf66)
 
 &nbsp;
