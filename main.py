@@ -1,4 +1,4 @@
-from toast_notification import create_update_notification, create_upload_reminder_notification, create_generic_notification
+from toast_notification import create_update_notification, create_generic_notification #,create_upload_reminder_notification
 from get_wtf_folder import get_wtf_folder
 from hash_username import hash_username
 from get_endpoints import get_upload_endpoint, get_download_endpoint, remove_endpoint_from_str, get_version_endpoint
@@ -254,7 +254,7 @@ def write_to_upload_stats(upload_dict):
                 if upload_len in UPLOAD_STATS_ACHIEVEMENTS:
                     create_generic_notification("ACHIEVEMENT UNLOCKED!", f"{UPLOAD_STATS_ACHIEVEMENTS[upload_len].replace('ACHIEVEMENT UNLOCKED!', '')}&#10;So far you helped update {upload_stats_json['total_items_updated']:,} items.")
                     logger.info(f"{UPLOAD_STATS_ACHIEVEMENTS[upload_len]} So far you helped update {upload_stats_json['total_items_updated']:,} items.")
-                elif upload_len % 50:
+                elif upload_len % 50 == 0:
                     create_generic_notification("Steady uploader!", f"Big thanks for another 50 uploads.&#10;So far you helped update {upload_stats_json['total_items_updated']:,} items.")
                     logger.info(f"Steady uploader! Big thanks for another 50 uploads. So far you helped update {upload_stats_json['total_items_updated']:,} items.")
                 return
@@ -553,11 +553,7 @@ def main():
     remove_old_logs()
     
     last_upload_time = 0
-    last_successful_upload = 0
     last_download_time = 0
-    ascension_started_running = 0
-    upload_reminder_given = False
-    upload_reminder_given_time = 0
     last_update_check = time_time()
     
     loading_chars = ["[   ]","[=  ]","[== ]","[===]","[ ==]","[  =]"]
@@ -568,27 +564,11 @@ def main():
     while True:
         current_time = time_time()
         
-        if not is_ascension_running() and ascension_started_running != 0:
-            ascension_started_running = 0
-            
-        if is_ascension_running() and ascension_started_running == 0:
-            ascension_started_running = time_time()
-            
-        if upload_reminder_given and (current_time - upload_reminder_given_time) > 86400:
-            upload_reminder_given = False
-            
-        if ascension_started_running != 0 and current_time - ascension_started_running >= UPLOAD_REMINDER_INTERVAL_SECONDS and last_successful_upload == 0 and upload_reminder_given == False:
-            logger.critical(f"You have been playing for more than {int((current_time - ascension_started_running)/60/60)} hours. Please consider doing an AH scan and /reload-ing to trigger DB upload. Thanks! <3")
-            create_upload_reminder_notification(current_time - ascension_started_running)
-            upload_reminder_given = True
-            upload_reminder_given_time = time_time()
-        
         if current_time - last_upload_time >= UPLOAD_INTERVAL_SECONDS:
             clear_message(msg)
             ret = upload_data()
             if ret: # ret in this context holds the number of updated items
                 write_to_upload_stats({'time': time_time(), 'version': VERSION, 'items_updated': ret})
-                last_successful_upload = time_time()
                 logger.info(SEPARATOR)
             else:
                 logger.debug(SEPARATOR)
