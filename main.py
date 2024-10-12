@@ -567,8 +567,9 @@ def main():
         if current_time - last_upload_time >= UPLOAD_INTERVAL_SECONDS:
             clear_message(msg)
             ret = upload_data()
-            if ret: # ret in this context holds the number of updated items
-                write_to_upload_stats({'time': time_time(), 'version': VERSION, 'items_updated': ret})
+            if ret or ret == 0: # ret in this context holds the number of updated items
+                if ret:
+                    write_to_upload_stats({'time': time_time(), 'version': VERSION, 'items_updated': ret})
                 logger.info(SEPARATOR)
             else:
                 logger.debug(SEPARATOR)
@@ -577,7 +578,7 @@ def main():
         if current_time - last_download_time >= DOWNLOAD_INTERVAL_SECONDS:
             clear_message(msg)
             ret = download_data()
-            if ret:
+            if ret or ret == 0:
                 logger.info(SEPARATOR)
             else:
                 logger.debug(SEPARATOR)
