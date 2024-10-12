@@ -246,20 +246,21 @@ def write_to_upload_stats(upload_dict):
             upload_stats_str = outfile.read()
             if upload_stats_str:
                 upload_stats_json = json.loads(upload_stats_str)
+                upload_stats_json["total_upload_count"] += 1
                 upload_stats_json["total_items_updated"] += upload_dict["items_updated"]
                 upload_stats_json["individual_uploads"].append(upload_dict)
                 with open(UPLOAD_STATS_PATH, "w") as outfile:
                     outfile.write(json_dumps(upload_stats_json, indent=4))
-                upload_len = len(upload_stats_json["individual_uploads"])
-                if upload_len in UPLOAD_STATS_ACHIEVEMENTS:
-                    create_generic_notification("ACHIEVEMENT UNLOCKED!", f"{UPLOAD_STATS_ACHIEVEMENTS[upload_len].replace('ACHIEVEMENT UNLOCKED!', '')}&#10;So far you helped update {upload_stats_json['total_items_updated']:,} items.")
-                    logger.info(f"{UPLOAD_STATS_ACHIEVEMENTS[upload_len]} So far you helped update {upload_stats_json['total_items_updated']:,} items.")
-                elif upload_len % 50 == 0:
-                    create_generic_notification("Steady uploader!", f"Big thanks for another 50 uploads.&#10;So far you helped update {upload_stats_json['total_items_updated']:,} items.")
-                    logger.info(f"Steady uploader! Big thanks for another 50 uploads. So far you helped update {upload_stats_json['total_items_updated']:,} items.")
+                if upload_stats_json["total_upload_count"] in UPLOAD_STATS_ACHIEVEMENTS:
+                    create_generic_notification("ACHIEVEMENT UNLOCKED!", f"{UPLOAD_STATS_ACHIEVEMENTS[upload_stats_json['total_upload_count']].replace('ACHIEVEMENT UNLOCKED!', '')}&#10;So far you helped update {upload_stats_json['total_items_updated']:,} items.")
+                    logger.info(f"{UPLOAD_STATS_ACHIEVEMENTS[upload_stats_json['total_upload_count']]} So far you helped update {upload_stats_json['total_items_updated']:,} items.")
+                elif upload_stats_json['total_upload_count'] % 50 == 0:
+                    create_generic_notification("Steady uploader!", f"Big thanks for another 50 uploads.&#10;So far you uploaded {upload_stats_json['total_upload_count']:,} times and helped update {upload_stats_json['total_items_updated']:,} items.")
+                    logger.info(f"Steady uploader! Big thanks for another 50 uploads. So far you uploaded {upload_stats_json['total_upload_count']:,} times and helped update {upload_stats_json['total_items_updated']:,} items.")
                 return
 
     upload_stats_json = {}
+    upload_stats_json["total_upload_count"] = 1
     upload_stats_json["total_items_updated"] = upload_dict["items_updated"]
     upload_stats_json["individual_uploads"] = []
     upload_stats_json["individual_uploads"].append(upload_dict)
