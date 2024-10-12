@@ -537,8 +537,8 @@ def check_for_new_versions():
 def app_start_logging():
     logger.info(f"{APP_NAME} started")
     logger.info(SEPARATOR)
-    logger.info("Make sure you have Notifications enabled so that you know when there is an update. (Check FAQ on GitHub for how to do that.)")
-    logger.info("Don't be a scrub and upload frequently!")
+    logger.info("Make sure you have Windows' notifications enabled (check GitHub FAQ)")
+    logger.info("DON'T BE A SCRUB, UPLOAD FREQUENTLY.")
     logger.info(SEPARATOR)
     
 def main():
