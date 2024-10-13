@@ -24,7 +24,7 @@ import sys
 
 # %% GLOBAL VARS
 
-VERSION = "0.15"
+VERSION = "1.0"
 MAX_VERSION = None
 
 if getattr(sys, 'frozen', False):
