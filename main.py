@@ -65,13 +65,13 @@ UPLOAD_STATS_ACHIEVEMENTS = {
     3: "ACHIEVEMENT UNLOCKED! You third upload! Steady pace, I like it!",
     10: "ACHIEVEMENT UNLOCKED! Ten uploads! Heck yea!",
     25: "ACHIEVEMENT UNLOCKED! Twenty five uploads. Respectable!",
-    50: "ACHIEVEMENT UNLOCKED! Number of uploads - half a hundred. You rock!",
+    50: "ACHIEVEMENT UNLOCKED! Half a hundred. You rock!",
     100: "ACHIEVEMENT UNLOCKED! Hundred uploads??? Epic!",
-    1000: "ACHIEVEMENT UNLOCKED! A thousand successful uploads. We're getting into legendary territory!",
+    1000: "ACHIEVEMENT UNLOCKED! A thousand uploads. We're getting into legendary territory!",
     10000: "ACHIEVEMENT UNLOCKED! TEN THOUSAND! OK, consider yourself a LEGEND!",
-    100000: "ACHIEVEMENT UNLOCKED! Hundred thousand? I mean, other players love you for this, but if you continue I think we're gonna have to have an intervention :-P",
-    1000000: "ACHIEVEMENT UNLOCKED! MEGA! I mean a million. You're now on par with the Emperor of Mankind. Something tells me we forgot about that intervention...",
-    10000000: "Ten milion uploads... Real talk, dude, you NEED to stop...",
+    100000: "ACHIEVEMENT UNLOCKED! Hundred thousand? I mean, other players LOVE you for this, but if you continue there's gonna have to be an intervention :-P",
+    1000000: "ACHIEVEMENT UNLOCKED! MEGA! I mean a million. You're now on par with the Emperor of Mankind. Something tells me we forgot about that intervention we mentioned at 100k uploads...",
+    10000000: "ACHIEVEMENT UNLOCKED! TEN MILLION UPLOADS!!!. Real talk, dude, you NEED to stop...",
 }
 
 def generate_chunks(file_object, chunk_size=1024):
@@ -253,10 +253,14 @@ def write_to_upload_stats(upload_dict):
                     outfile.write(json_dumps(upload_stats_json, indent=4))
                 if upload_stats_json["total_upload_count"] in UPLOAD_STATS_ACHIEVEMENTS:
                     create_generic_notification("ACHIEVEMENT UNLOCKED!", f"{UPLOAD_STATS_ACHIEVEMENTS[upload_stats_json['total_upload_count']].replace('ACHIEVEMENT UNLOCKED!', '')}&#10;So far you helped update {upload_stats_json['total_items_updated']:,} items.")
-                    logger.info(f"{UPLOAD_STATS_ACHIEVEMENTS[upload_stats_json['total_upload_count']]} So far you helped update {upload_stats_json['total_items_updated']:,} items.")
+                    logger.info(SEPARATOR)
+                    logger.info(UPLOAD_STATS_ACHIEVEMENTS[upload_stats_json['total_upload_count']])
+                    logger.info(f"So far you helped update {upload_stats_json['total_items_updated']:,} items.")
                 elif upload_stats_json['total_upload_count'] % 50 == 0:
                     create_generic_notification("Steady uploader!", f"Big thanks for another 50 uploads.&#10;So far you uploaded {upload_stats_json['total_upload_count']:,} times and helped update {upload_stats_json['total_items_updated']:,} items.")
-                    logger.info(f"Steady uploader! Big thanks for another 50 uploads. So far you uploaded {upload_stats_json['total_upload_count']:,} times and helped update {upload_stats_json['total_items_updated']:,} items.")
+                    logger.info(SEPARATOR)
+                    logger.info("Steady uploader! Big thanks for another 50 uploads.")
+                    logger.info(f"So far you uploaded {upload_stats_json['total_upload_count']:,} times and helped update {upload_stats_json['total_items_updated']:,} items.")
                 return
 
     upload_stats_json = {}
@@ -269,7 +273,9 @@ def write_to_upload_stats(upload_dict):
         outfile.write(json_dumps(upload_stats_json, indent=4))
         
     create_generic_notification("ACHIEVEMENT UNLOCKED!", f"You first upload! Keep it up! Proud of you!&#10;So far you helped update {upload_stats_json['total_items_updated']:,} items.")
-    logger.info(f"ACHIEVEMENT UNLOCKED! You first upload! Keep it up! Proud of you! So far you helped update {upload_stats_json['total_items_updated']:,} items.")
+    logger.info(SEPARATOR)
+    logger.info("ACHIEVEMENT UNLOCKED! You first upload! Keep it up! Proud of you!")
+    logger.info(f"So far you helped update {upload_stats_json['total_items_updated']:,} items.")
 
         
 def write_json_file(json_object):
@@ -568,7 +574,7 @@ def main():
         if current_time - last_upload_time >= UPLOAD_INTERVAL_SECONDS:
             clear_message(msg)
             ret = upload_data()
-            if ret or ret == 0: # ret in this context holds the number of updated items
+            if ret != False and ret != None: # ret in this context holds the number of updated items
                 if ret:
                     write_to_upload_stats({'time': time_time(), 'version': VERSION, 'items_updated': ret})
                 logger.info(SEPARATOR)
@@ -579,7 +585,7 @@ def main():
         if current_time - last_download_time >= DOWNLOAD_INTERVAL_SECONDS:
             clear_message(msg)
             ret = download_data()
-            if ret or ret == 0:
+            if ret != False and ret != None:
                 logger.info(SEPARATOR)
             else:
                 logger.debug(SEPARATOR)
