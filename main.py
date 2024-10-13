@@ -71,7 +71,7 @@ UPLOAD_STATS_ACHIEVEMENTS = {
     10000: "ACHIEVEMENT UNLOCKED! TEN THOUSAND! OK, consider yourself a LEGEND!",
     100000: "ACHIEVEMENT UNLOCKED! Hundred thousand? I mean, other players LOVE you for this, but if you continue there's gonna have to be an intervention :-P",
     1000000: "ACHIEVEMENT UNLOCKED! MEGA! I mean a million. You're now on par with the Emperor of Mankind. Something tells me we forgot about that intervention we mentioned at 100k uploads...",
-    10000000: "ACHIEVEMENT UNLOCKED! TEN MILLION UPLOADS!!!. Real talk, dude, you NEED to stop...",
+    10000000: "ACHIEVEMENT UNLOCKED! TEN MILLION UPLOADS!!! Real talk, dude, you NEED to stop...",
 }
 
 def generate_chunks(file_object, chunk_size=1024):
@@ -544,7 +544,7 @@ def check_for_new_versions():
 def app_start_logging():
     logger.info(f"{APP_NAME} started")
     logger.info(SEPARATOR)
-    logger.info("Make sure you have Windows' notifications enabled (check GitHub FAQ)")
+    logger.info("Make sure you have Windows' notifications enabled (check GitHub FAQ).")
     logger.info("DON'T BE A SCRUB, UPLOAD FREQUENTLY.")
     logger.info(SEPARATOR)
     
