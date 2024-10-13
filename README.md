@@ -6,6 +6,10 @@ You can get a hold of me on [SzylerAddons Discord](https://discord.gg/uTxuDvuHcn
 
 &nbsp;
 
+Thanks to [Szyler](https://github.com/Szyler) and [MummieSenpai](https://github.com/MummieSenpai) for testing.
+
+&nbsp;
+
 > [!CAUTION]
 > Will most likely be blocked by Windows Defender / Antivirus software
 > 
