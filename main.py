@@ -1,9 +1,13 @@
-from toast_notification import create_update_notification
+# %% LOCAL IMPORTS
+
+from toast_notification import create_update_notification, create_generic_notification #,create_upload_reminder_notification
 from get_wtf_folder import get_wtf_folder
 from hash_username import hash_username
 from get_endpoints import get_upload_endpoint, get_download_endpoint, remove_endpoint_from_str, get_version_endpoint
 from task_scheduler import create_task_from_xml
 import luadata_serialization
+
+# %% MODULE IMPORTS
 
 from os import path as os_path, listdir as os_listdir, makedirs as os_makedirs, remove as os_remove
 from json import dumps as json_dumps, loads as json_loads
@@ -18,7 +22,10 @@ import io
 import json
 import sys
 
-VERSION = "0.14"
+# %% GLOBAL VARS
+
+VERSION = "0.15"
+MAX_VERSION = None
 
 if getattr(sys, 'frozen', False):
     # Running in PyInstaller executable
@@ -34,8 +41,13 @@ XML_TASK_DEFINITION_PATH = os_path.join(SCRIPT_DIR, "startup_task_definition.xml
 JSON_FILE_NAME = "update_times.json"
 JSON_PATH = os_path.join(SCRIPT_DIR, JSON_FILE_NAME)
 
+UPLOAD_STATS_FILE_NAME = "upload_stats.json"
+UPLOAD_STATS_PATH = os_path.join(SCRIPT_DIR, UPLOAD_STATS_FILE_NAME)
+
 UPLOAD_INTERVAL_SECONDS = 300
 DOWNLOAD_INTERVAL_SECONDS = 900
+UPDATE_INTERVAL_SECONDS = 9000
+UPLOAD_REMINDER_INTERVAL_SECONDS = 21600
 HTTP_TRY_CAP = 5
 current_tries = {"upload_tries": 1, "download_tries": 1, "check_version_tries": 1}
 REQUEST_TIMEOUT = (60, 180)
@@ -54,9 +66,20 @@ NUMBER_OF_LOGS_TO_KEEP = 50
 APP_NAME = f"Ascension TSM Data Sharing App v{VERSION}"
 SEPARATOR = "---------------------------------------------"
 
-session = requests.Session()
-session.mount("https://", ADAPTER)
-session.mount("http://", ADAPTER)
+UPLOAD_STATS_ACHIEVEMENTS = {
+    3: "ACHIEVEMENT UNLOCKED! You third upload! Steady pace, I like it!",
+    10: "ACHIEVEMENT UNLOCKED! Ten uploads! Heck yea!",
+    25: "ACHIEVEMENT UNLOCKED! Twenty five uploads. Respectable!",
+    50: "ACHIEVEMENT UNLOCKED! Half a hundred. You rock!",
+    100: "ACHIEVEMENT UNLOCKED! Hundred uploads??? Epic!",
+    1000: "ACHIEVEMENT UNLOCKED! A thousand uploads. We're getting into legendary territory!",
+    10000: "ACHIEVEMENT UNLOCKED! TEN THOUSAND! OK, consider yourself a LEGEND!",
+    100000: "ACHIEVEMENT UNLOCKED! Hundred thousand? I mean, other players LOVE you for this, but if you continue there's gonna have to be an intervention :-P",
+    1000000: "ACHIEVEMENT UNLOCKED! MEGA! I mean a million. You're now on par with the Emperor of Mankind. Something tells me we forgot about that intervention we mentioned at 100k uploads...",
+    10000000: "ACHIEVEMENT UNLOCKED! TEN MILLION UPLOADS!!! Real talk, dude, you NEED to stop...",
+}
+
+# %% FUNCTIONS
 
 def generate_chunks(file_object, chunk_size=1024):
     while True:
@@ -223,6 +246,44 @@ def initiliaze_json():
     obj["latest_data"] = latest_data
     write_json_file(obj)
     logger.info(SEPARATOR)
+    
+def write_to_upload_stats(upload_dict):
+    if os_path.exists(UPLOAD_STATS_PATH):
+        with open(UPLOAD_STATS_PATH, "r") as outfile:
+            upload_stats_str = outfile.read()
+            if upload_stats_str:
+                upload_stats_json = json.loads(upload_stats_str)
+                upload_stats_json["total_upload_count"] += 1
+                upload_stats_json["total_items_updated"] += upload_dict["items_updated"]
+                upload_stats_json["individual_uploads"].append(upload_dict)
+                with open(UPLOAD_STATS_PATH, "w") as outfile:
+                    outfile.write(json_dumps(upload_stats_json, indent=4))
+                if upload_stats_json["total_upload_count"] in UPLOAD_STATS_ACHIEVEMENTS:
+                    create_generic_notification("ACHIEVEMENT UNLOCKED!", f"{UPLOAD_STATS_ACHIEVEMENTS[upload_stats_json['total_upload_count']].replace('ACHIEVEMENT UNLOCKED!', '')}&#10;So far you helped update {upload_stats_json['total_items_updated']:,} items.")
+                    logger.info(SEPARATOR)
+                    logger.info(UPLOAD_STATS_ACHIEVEMENTS[upload_stats_json['total_upload_count']])
+                    logger.info(f"So far you helped update {upload_stats_json['total_items_updated']:,} items.")
+                elif upload_stats_json['total_upload_count'] % 50 == 0:
+                    create_generic_notification("Steady uploader!", f"Big thanks for another 50 uploads.&#10;So far you uploaded {upload_stats_json['total_upload_count']:,} times and helped update {upload_stats_json['total_items_updated']:,} items.")
+                    logger.info(SEPARATOR)
+                    logger.info("Steady uploader! Big thanks for another 50 uploads.")
+                    logger.info(f"So far you uploaded {upload_stats_json['total_upload_count']:,} times and helped update {upload_stats_json['total_items_updated']:,} items.")
+                return
+
+    upload_stats_json = {}
+    upload_stats_json["total_upload_count"] = 1
+    upload_stats_json["total_items_updated"] = upload_dict["items_updated"]
+    upload_stats_json["individual_uploads"] = []
+    upload_stats_json["individual_uploads"].append(upload_dict)
+    
+    with open(UPLOAD_STATS_PATH, "w") as outfile:
+        outfile.write(json_dumps(upload_stats_json, indent=4))
+        
+    create_generic_notification("ACHIEVEMENT UNLOCKED!", f"You first upload! Keep it up! Proud of you!&#10;So far you helped update {upload_stats_json['total_items_updated']:,} items.")
+    logger.info(SEPARATOR)
+    logger.info("ACHIEVEMENT UNLOCKED! You first upload! Keep it up! Proud of you!")
+    logger.info(f"So far you helped update {upload_stats_json['total_items_updated']:,} items.")
+
         
 def write_json_file(json_object):
     logger.debug("Saving json file")
@@ -340,7 +401,7 @@ def upload_data():
                     return ret
                 
                 logger.info("Upload block - " + import_result['message'])
-                ret = True
+                ret = import_result['update_count']
             else:
                 logger.debug("New scan timestamp found but only for Dev/PTR/QA etc servers, ignoring")
             
@@ -467,29 +528,40 @@ def download_data():
     return ret
 
 
-if "logger" not in globals() and "logger" not in locals():
-    logger = get_logger()
-
 def clear_message(msg):
     sys.stdout.write('\r' + ' ' * len(msg) + '\r')
     sys.stdout.flush()
     
-def main():
-    logger.info(f"{APP_NAME} started")
-    logger.info(SEPARATOR)
+def check_for_new_versions():
     version_list = get_version_list()
+    newest_version = sorted(list(version_list), reverse=True)[0]
     newer_versions = [v for k, v in version_list.items() if k > VERSION]
     if newer_versions:
         if any(newer_versions):
             create_update_notification(mandatory=True)
-            logger.critical("There is a MANDATORY update for this app. Please download the latest release here: 'https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/releases'")
+            logger.critical("There is a MANDATORY update for this app. Please download the latest release (EXE) here: 'https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/releases'")
             input("Press any key to close the console")
             sys.exit()
         else:
             create_update_notification(mandatory=False)
-            logger.critical("There is an update for this app. Please download the latest release here: 'https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/releases'")
-            input("Press any key to close the console")
-            sys.exit()
+            logger.critical("There is an update for this app. Please download the latest release (EXE) here: 'https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/releases'")
+        logger.info(SEPARATOR)
+    return newest_version
+        
+def app_start_logging():
+    logger.info(f"{APP_NAME} started")
+    logger.info(SEPARATOR)
+    logger.info("Make sure you have Windows' notifications enabled (check GitHub FAQ).")
+    logger.info("DON'T BE A SCRUB, UPLOAD FREQUENTLY.")
+    logger.info(SEPARATOR)
+
+# %% MAIN LOOP
+
+def main():
+    global MAX_VERSION
+    
+    app_start_logging()
+    MAX_VERSION = check_for_new_versions()
     
     if not json_file_initialized():
         initiliaze_json()
@@ -498,16 +570,22 @@ def main():
     
     last_upload_time = 0
     last_download_time = 0
+    last_update_check = time_time()
+    
     loading_chars = ["[   ]","[=  ]","[== ]","[===]","[ ==]","[  =]"]
     loading_char_idx = 0
     msg = ""
+    old_msg = ""
+    
     while True:
         current_time = time_time()
         
         if current_time - last_upload_time >= UPLOAD_INTERVAL_SECONDS:
             clear_message(msg)
             ret = upload_data()
-            if ret:
+            if ret != False and ret != None: # ret in this context holds the number of updated items
+                if ret:
+                    write_to_upload_stats({'time': time_time(), 'version': VERSION, 'items_updated': ret})
                 logger.info(SEPARATOR)
             else:
                 logger.debug(SEPARATOR)
@@ -516,23 +594,40 @@ def main():
         if current_time - last_download_time >= DOWNLOAD_INTERVAL_SECONDS:
             clear_message(msg)
             ret = download_data()
-            if ret:
+            if ret != False and ret != None:
                 logger.info(SEPARATOR)
             else:
                 logger.debug(SEPARATOR)
             last_download_time = current_time
         
-        clear_message(msg)
-        msg = time_strftime("%Y-%m-%d %H:%M:%S,%MS") + " - " + loading_chars[loading_char_idx % len(loading_chars)] + " - Detecting changes (Next upload in " + str(round((UPLOAD_INTERVAL_SECONDS - (current_time - last_upload_time))/60, 1)) + "min / Next download in " + str(round((DOWNLOAD_INTERVAL_SECONDS - (current_time - last_download_time))/60,1)) + "min)"
+        if current_time - last_update_check >= UPDATE_INTERVAL_SECONDS:
+            MAX_VERSION = check_for_new_versions()
+            
+        old_msg = msg
+        msg = time_strftime("%Y-%m-%d %H:%M:%S,000") + " - " + loading_chars[loading_char_idx % len(loading_chars)] + " - Detecting changes (Next upload in " + str(round((UPLOAD_INTERVAL_SECONDS - (current_time - last_upload_time))/60, 1)) + "min / Next download in " + str(round((DOWNLOAD_INTERVAL_SECONDS - (current_time - last_download_time))/60,1)) + "min)"
+        if len(old_msg) > len(msg):
+            clear_message(old_msg)
         sys.stdout.write('\r' + msg)
         sys.stdout.flush()
         loading_char_idx += 1
         time_sleep(0.5)
-        
+
+
 if __name__ == "__main__":
+    if "logger" not in globals() and "logger" not in locals():
+        logger = get_logger()
+        
+    session = requests.Session()
+    session.mount("https://", ADAPTER)
+    session.mount("http://", ADAPTER)
+        
     try:
         main()
     except Exception:
-        logger.critical("An exception occurred. Please send the logs to Mortificator on Discord (https://discord.gg/uTxuDvuHcn --> Addons from Szyler and co --> #tsm-data-sharing - tag @Mortificator) or create an issue on Github (https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/issues)")
+        if VERSION < MAX_VERSION:
+            exception_msg = "An exception occurred, likely because you're not using the most recent version of this app. Before reporting, please download the latest release (EXE) here: 'https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/releases'. If that doesn't help, send the logs to Mortificator on Discord (https://discord.gg/uTxuDvuHcn --> Addons from Szyler and co --> #tsm-data-sharing - tag @Mortificator) or create an issue on Github (https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/issues)"
+        else:
+            exception_msg = "An exception occurred. Please send the logs to Mortificator on Discord (https://discord.gg/uTxuDvuHcn --> Addons from Szyler and co --> #tsm-data-sharing - tag @Mortificator) or create an issue on Github (https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/issues)"
+        logger.critical(exception_msg)
         logger.exception("Exception")
         input("Press any key to close the console")
