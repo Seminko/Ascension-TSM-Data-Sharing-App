@@ -4,8 +4,6 @@
 
 You can get a hold of me on [SzylerAddons Discord](https://discord.gg/uTxuDvuHcn) (Addons from Szyler and co --> #tsm-data-sharing) - @the_real_mortificator.
 
-&nbsp;
-
 Thanks to [Szyler](https://github.com/Szyler) and [MummieSenpai](https://github.com/MummieSenpai) for testing.
 
 &nbsp;
@@ -14,6 +12,8 @@ Thanks to [Szyler](https://github.com/Szyler) and [MummieSenpai](https://github.
 > Will most likely be blocked by Windows Defender / Antivirus software
 > 
 > READ FAQ
+
+&nbsp;
 
 ## What it does - TLDR
 Periodically checks for a change to scanned data, uploads the latest to the database and downloads the latest to your local PC, mimicking what the official TSM app (used on retail WoW) does. As they describe it: "keeps your addon data up-to-date".<br>
