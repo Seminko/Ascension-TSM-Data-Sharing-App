@@ -1,9 +1,13 @@
+# %% LOCAL IMPORTS
+
 from toast_notification import create_update_notification, create_generic_notification #,create_upload_reminder_notification
 from get_wtf_folder import get_wtf_folder
 from hash_username import hash_username
 from get_endpoints import get_upload_endpoint, get_download_endpoint, remove_endpoint_from_str, get_version_endpoint
 from task_scheduler import create_task_from_xml
 import luadata_serialization
+
+# %% MODULE IMPORTS
 
 from os import path as os_path, listdir as os_listdir, makedirs as os_makedirs, remove as os_remove
 from json import dumps as json_dumps, loads as json_loads
@@ -18,6 +22,7 @@ import io
 import json
 import sys
 
+# %% GLOBAL VARS
 
 VERSION = "0.15"
 MAX_VERSION = None
@@ -73,6 +78,8 @@ UPLOAD_STATS_ACHIEVEMENTS = {
     1000000: "ACHIEVEMENT UNLOCKED! MEGA! I mean a million. You're now on par with the Emperor of Mankind. Something tells me we forgot about that intervention we mentioned at 100k uploads...",
     10000000: "ACHIEVEMENT UNLOCKED! TEN MILLION UPLOADS!!! Real talk, dude, you NEED to stop...",
 }
+
+# %% FUNCTIONS
 
 def generate_chunks(file_object, chunk_size=1024):
     while True:
@@ -547,7 +554,9 @@ def app_start_logging():
     logger.info("Make sure you have Windows' notifications enabled (check GitHub FAQ).")
     logger.info("DON'T BE A SCRUB, UPLOAD FREQUENTLY.")
     logger.info(SEPARATOR)
-    
+
+# %% MAIN LOOP
+
 def main():
     global MAX_VERSION
     
