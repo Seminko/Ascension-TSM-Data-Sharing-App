@@ -539,12 +539,12 @@ def check_for_new_versions():
     if newer_versions:
         if any(newer_versions):
             create_update_notification(mandatory=True)
-            logger.critical("There is a MANDATORY update for this app. Please download the latest release here: 'https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/releases'")
+            logger.critical("There is a MANDATORY update for this app. Please download the latest release (EXE) here: 'https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/releases'")
             input("Press any key to close the console")
             sys.exit()
         else:
             create_update_notification(mandatory=False)
-            logger.critical("There is an update for this app. Please download the latest release here: 'https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/releases'")
+            logger.critical("There is an update for this app. Please download the latest release (EXE) here: 'https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/releases'")
         logger.info(SEPARATOR)
     return newest_version
         
@@ -625,7 +625,7 @@ if __name__ == "__main__":
         main()
     except Exception:
         if VERSION < MAX_VERSION:
-            exception_msg = "An exception occurred, likely because you're not using the most recent version of this app. Before reporting, please download the latest release here: 'https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/releases'. If that doesn't help, send the logs to Mortificator on Discord (https://discord.gg/uTxuDvuHcn --> Addons from Szyler and co --> #tsm-data-sharing - tag @Mortificator) or create an issue on Github (https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/issues)"
+            exception_msg = "An exception occurred, likely because you're not using the most recent version of this app. Before reporting, please download the latest release (EXE) here: 'https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/releases'. If that doesn't help, send the logs to Mortificator on Discord (https://discord.gg/uTxuDvuHcn --> Addons from Szyler and co --> #tsm-data-sharing - tag @Mortificator) or create an issue on Github (https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/issues)"
         else:
             exception_msg = "An exception occurred. Please send the logs to Mortificator on Discord (https://discord.gg/uTxuDvuHcn --> Addons from Szyler and co --> #tsm-data-sharing - tag @Mortificator) or create an issue on Github (https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/issues)"
         logger.critical(exception_msg)
