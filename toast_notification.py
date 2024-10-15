@@ -73,7 +73,7 @@ def create_generic_notification(title, desc):
     
     tString = f"""
     <toast duration='long'>
-        <audio src='ms-winsoundevent:Notification.Looping.Call10' loop='false' silent='true'/>
+        <audio src='ms-winsoundevent:Notification.Default' loop='false' silent='false'/>
         <visual>
             <binding template='ToastText02'>
                 <text id='1'>{title}</text>
@@ -81,6 +81,7 @@ def create_generic_notification(title, desc):
             </binding>
         </visual>
     </toast>
+    
     """
     
     # Load the XML content into the notification
