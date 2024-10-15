@@ -602,6 +602,7 @@ def main():
         
         if current_time - last_update_check >= UPDATE_INTERVAL_SECONDS:
             MAX_VERSION = check_for_new_versions()
+            last_update_check = time_time()
             
         old_msg = msg
         msg = time_strftime("%Y-%m-%d %H:%M:%S,000") + " - " + loading_chars[loading_char_idx % len(loading_chars)] + " - Detecting changes (Next upload in " + str(round((UPLOAD_INTERVAL_SECONDS - (current_time - last_upload_time))/60, 1)) + "min / Next download in " + str(round((DOWNLOAD_INTERVAL_SECONDS - (current_time - last_download_time))/60,1)) + "min)"
