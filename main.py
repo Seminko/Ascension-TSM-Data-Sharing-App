@@ -1,6 +1,6 @@
 # %% LOCAL IMPORTS
 
-from toast_notification import create_update_notification, create_generic_notification #,create_upload_reminder_notification
+from toast_notification import create_update_notification, create_generic_notification # this needs to be before get_wft_folder (if I remember correctly)
 from get_wtf_folder import get_wtf_folder
 from hash_username import hash_username
 from get_endpoints import get_upload_endpoint, get_download_endpoint, remove_endpoint_from_str, get_version_endpoint
@@ -9,9 +9,9 @@ import luadata_serialization
 
 # %% MODULE IMPORTS
 
-from os import path as os_path, listdir as os_listdir, makedirs as os_makedirs, remove as os_remove
-from json import dumps as json_dumps, loads as json_loads
-from time import time as time_time, sleep as time_sleep, strftime as time_strftime
+import os
+import json
+import time
 import logging
 import requests
 from requests.adapters import HTTPAdapter
@@ -19,30 +19,29 @@ from urllib3.util.retry import Retry
 from re import sub as re_sub, search as re_search
 from psutil import process_iter
 import io
-import json
 import sys
 
 # %% GLOBAL VARS
 
-VERSION = "1.0"
+VERSION = "1.1"
 MAX_VERSION = None
 
 if getattr(sys, 'frozen', False):
     # Running in PyInstaller executable
-    SCRIPT_DIR = os_path.dirname(sys.executable)
+    SCRIPT_DIR = os.path.dirname(sys.executable)
     EXE_PATH = sys.executable
 else:
     # Running as a regular Python script
-    SCRIPT_DIR = os_path.dirname(os_path.abspath(__file__))
-    EXE_PATH = os_path.abspath(__file__)
+    SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+    EXE_PATH = os.path.abspath(__file__)
     
-XML_TASK_DEFINITION_PATH = os_path.join(SCRIPT_DIR, "startup_task_definition.xml")
+XML_TASK_DEFINITION_PATH = os.path.join(SCRIPT_DIR, "startup_task_definition.xml")
     
 JSON_FILE_NAME = "update_times.json"
-JSON_PATH = os_path.join(SCRIPT_DIR, JSON_FILE_NAME)
+JSON_PATH = os.path.join(SCRIPT_DIR, JSON_FILE_NAME)
 
 UPLOAD_STATS_FILE_NAME = "upload_stats.json"
-UPLOAD_STATS_PATH = os_path.join(SCRIPT_DIR, UPLOAD_STATS_FILE_NAME)
+UPLOAD_STATS_PATH = os.path.join(SCRIPT_DIR, UPLOAD_STATS_FILE_NAME)
 
 UPLOAD_INTERVAL_SECONDS = 300
 DOWNLOAD_INTERVAL_SECONDS = 900
@@ -144,22 +143,22 @@ def get_version_list():
     return make_http_request("check_version")
     
 def interruptible_sleep(seconds):
-    start_time = time_time()
+    start_time = time.time()
     end_time = start_time + seconds
     
-    while time_time() < end_time:
-        time_sleep(0.1)  # Sleep in smaller increments
+    while time.time() < end_time:
+        time.sleep(0.1)  # Sleep in smaller increments
 
 def get_files(dst_folder):
-    return [f for f in os_listdir(dst_folder) if os_path.isfile(os_path.join(dst_folder, f))]
+    return [f for f in os.listdir(dst_folder) if os.path.isfile(os.path.join(dst_folder, f))]
 
 def remove_old_logs():
     logger.debug("Checking for old logs to be removed")
-    dst_folder = os_path.join(SCRIPT_DIR, 'logs')
+    dst_folder = os.path.join(SCRIPT_DIR, 'logs')
     file_list = get_files(dst_folder)
     if len(file_list) > NUMBER_OF_LOGS_TO_KEEP:
         full_path_list = [dst_folder + "\\" + i for i in file_list]
-        full_path_list.sort(key=os_path.getmtime, reverse=True)
+        full_path_list.sort(key=os.path.getmtime, reverse=True)
         logs_to_remove = full_path_list[NUMBER_OF_LOGS_TO_KEEP:]
         word = "logs"
         if len(logs_to_remove) == 1:
@@ -167,7 +166,7 @@ def remove_old_logs():
         logger.debug(f"Removing {len(logs_to_remove)} oldest {word}") 
         for log_to_remove in logs_to_remove:
             try:
-                os_remove(log_to_remove)
+                os.remove(log_to_remove)
             except PermissionError as e:
                 logger.debug(f"Removing log '{log_to_remove}' failed due to: '{str(repr(e))}'") 
     else:
@@ -193,12 +192,12 @@ def get_logger():
     logger.addHandler(console_handler)
     
     # Time Rotating File handler with DEBUG level
-    log_dir = os_path.join(SCRIPT_DIR, 'logs')
-    if not os_path.exists(log_dir):
-        os_makedirs(log_dir)
-    log_file = os_path.join(log_dir, 'ascension_tsm_data_sharing_app')
+    log_dir = os.path.join(SCRIPT_DIR, 'logs')
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+    log_file = os.path.join(log_dir, 'ascension_tsm_data_sharing_app')
     
-    timestamp = time_strftime("%Y%m%d_%H%M%S")
+    timestamp = time.strftime("%Y%m%d_%H%M%S")
     log_file_with_suffix = f"{log_file}_v{VERSION}_{timestamp}"
 
     file_handler = logging.FileHandler(f"{log_file_with_suffix}.log")
@@ -211,7 +210,7 @@ def get_logger():
 
 def json_file_initialized():
     logger.debug("Checking if json file is initialized")
-    if next((f for f in os_listdir() if f == JSON_FILE_NAME), None):
+    if next((f for f in os.listdir() if f == JSON_FILE_NAME), None):
         return True
     return False
 
@@ -231,8 +230,9 @@ def get_latest_scans_across_all_accounts_and_realms(file_info):
 
 def initiliaze_json():
     create_task_from_xml(task_name="TSM Data Sharing App", exe_path=EXE_PATH, working_directory=SCRIPT_DIR, xml_path=XML_TASK_DEFINITION_PATH, logger=logger)
+    logger.info(SEPARATOR)
     logger.info(f"Initializing '{JSON_FILE_NAME}'")
-    wtf_folder = get_wtf_folder()
+    wtf_folder = get_wtf_folder(logger)
     logger.info(f"WTF folder found at: '{wtf_folder}'")
     lua_file_paths = get_tsm_auctiondb_lua_files(wtf_folder)
     file_info = get_lua_file_path_info(lua_file_paths)
@@ -247,7 +247,7 @@ def initiliaze_json():
     logger.info(SEPARATOR)
     
 def write_to_upload_stats(upload_dict):
-    if os_path.exists(UPLOAD_STATS_PATH):
+    if os.path.exists(UPLOAD_STATS_PATH):
         with open(UPLOAD_STATS_PATH, "r") as outfile:
             upload_stats_str = outfile.read()
             if upload_stats_str:
@@ -268,7 +268,7 @@ def write_to_upload_stats(upload_dict):
                     upload_stats_json["individual_uploads"] = [upload_dict]
                     
                 with open(UPLOAD_STATS_PATH, "w") as outfile:
-                    outfile.write(json_dumps(upload_stats_json, indent=4))
+                    outfile.write(json.dumps(upload_stats_json, indent=4))
                     
                 if upload_stats_json["total_upload_count"] in UPLOAD_STATS_ACHIEVEMENTS:
                     create_generic_notification("ACHIEVEMENT UNLOCKED!", f"{UPLOAD_STATS_ACHIEVEMENTS[upload_stats_json['total_upload_count']].replace('ACHIEVEMENT UNLOCKED!', '')}&#10;So far you helped update {upload_stats_json['total_items_updated']:,} items.")
@@ -289,7 +289,7 @@ def write_to_upload_stats(upload_dict):
     upload_stats_json["individual_uploads"] = [upload_dict]
     
     with open(UPLOAD_STATS_PATH, "w") as outfile:
-        outfile.write(json_dumps(upload_stats_json, indent=4))
+        outfile.write(json.dumps(upload_stats_json, indent=4))
         
     create_generic_notification("ACHIEVEMENT UNLOCKED!", f"You first upload! Keep it up! Proud of you!&#10;So far you helped update {upload_stats_json['total_items_updated']:,} items.")
     logger.info(SEPARATOR)
@@ -300,13 +300,13 @@ def write_to_upload_stats(upload_dict):
 def write_json_file(json_object):
     logger.debug("Saving json file")
     with open(JSON_PATH, "w") as outfile:
-        json_string = json_dumps(json_object, indent=4)
+        json_string = json.dumps(json_object, indent=4)
         outfile.write(json_string)
         
 def read_json_file():
     logger.debug("Reading json file")
     with open(JSON_PATH, "r") as outfile:
-        json_object = json_loads(outfile.read())
+        json_object = json.loads(outfile.read())
         return json_object
     
 def get_last_complete_scan(lua_file_path):
@@ -329,7 +329,7 @@ def get_lua_file_path_info(lua_file_paths):
         logger.debug(f"Getting lua file path info for '{redact_account_name_from_lua_file_path(lua_file_path)}'")
         obj = {}
         obj["file_path"] = lua_file_path
-        obj["last_modified"] = os_path.getmtime(lua_file_path)
+        obj["last_modified"] = os.path.getmtime(lua_file_path)
         obj["realm_last_complete_scan"] = get_last_complete_scan(lua_file_path)
         file_updated_list.append(obj)
     return file_updated_list
@@ -337,18 +337,18 @@ def get_lua_file_path_info(lua_file_paths):
 def get_tsm_auctiondb_lua_files(wtf_folder):
     logger.debug("Getting all lua files for all accounts")
     "Gets 'TradeSkillMaster_AuctionDB.lua' file paths for all accounts"
-    account_names = os_listdir(os_path.join(wtf_folder, "Account"))
+    account_names = os.listdir(os.path.join(wtf_folder, "Account"))
     
     found_file_path_list = []
     file_path_list = []
     for account_name in account_names:
-        path = os_path.join(wtf_folder,
+        path = os.path.join(wtf_folder,
                             "Account",
                             account_name,
                             "SavedVariables",
                             "TradeSkillMaster_AuctionDB.lua")
         file_path_list.append(path)
-        if os_path.isfile(path):
+        if os.path.isfile(path):
             found_file_path_list.append(path)
             
     if found_file_path_list:
@@ -370,7 +370,7 @@ def upload_data():
             files_new.append(lua_file_path)
             continue
             
-        if obj["last_modified"] != os_path.getmtime(lua_file_path):
+        if obj["last_modified"] != os.path.getmtime(lua_file_path):
             files_updated.append(obj)
     
     if files_new or files_updated:
@@ -510,7 +510,7 @@ def download_data():
                     prefix = """-- Updated by Ascension TSM Data Sharing App (https://github.com/Seminko/Ascension-TSM-Data-Sharing-App)\nAscensionTSM_AuctionDB = """
                     luadata_serialization.write(lua_file_path, data, encoding="utf-8", indent="\t", prefix=prefix)
                     file_obj = next(f for f in json_file["file_info"] if f["file_path"] == lua_file_path)
-                    file_obj["last_modified"] = os_path.getmtime(lua_file_path)
+                    file_obj["last_modified"] = os.path.getmtime(lua_file_path)
                     need_to_update_json = True
         
         if need_to_update_json:
@@ -587,7 +587,7 @@ def main():
     
     last_upload_time = 0
     last_download_time = 0
-    last_update_check = time_time()
+    last_update_check = time.time()
     
     loading_chars = ["[   ]","[=  ]","[== ]","[===]","[ ==]","[  =]"]
     loading_char_idx = 0
@@ -595,14 +595,14 @@ def main():
     old_msg = ""
     
     while True:
-        current_time = time_time()
+        current_time = time.time()
         
         if current_time - last_upload_time >= UPLOAD_INTERVAL_SECONDS:
             clear_message(msg)
             ret = upload_data()
             if ret or ret == 0: # ret in this context holds the number of updated items
                 if ret:
-                    write_to_upload_stats({'time': time_time(), 'version': VERSION, 'items_updated': ret})
+                    write_to_upload_stats({'time': time.time(), 'version': VERSION, 'items_updated': ret})
                 logger.info(SEPARATOR)
             else:
                 logger.debug(SEPARATOR)
@@ -620,16 +620,16 @@ def main():
         if current_time - last_update_check >= UPDATE_INTERVAL_SECONDS or MAX_VERSION == None:
             clear_message(msg)
             MAX_VERSION = check_for_new_versions()
-            last_update_check = time_time()
+            last_update_check = time.time()
             
         old_msg = msg
-        msg = time_strftime("%Y-%m-%d %H:%M:%S,000") + " - " + loading_chars[loading_char_idx % len(loading_chars)] + " - Detecting changes (Next upload in " + str(round((UPLOAD_INTERVAL_SECONDS - (current_time - last_upload_time))/60, 1)) + "min / Next download in " + str(round((DOWNLOAD_INTERVAL_SECONDS - (current_time - last_download_time))/60,1)) + "min)"
+        msg = time.strftime("%Y-%m-%d %H:%M:%S,000") + " - " + loading_chars[loading_char_idx % len(loading_chars)] + " - Detecting changes (Next upload in " + str(round((UPLOAD_INTERVAL_SECONDS - (current_time - last_upload_time))/60, 1)) + "min / Next download in " + str(round((DOWNLOAD_INTERVAL_SECONDS - (current_time - last_download_time))/60,1)) + "min)"
         if len(old_msg) > len(msg):
             clear_message(old_msg)
         sys.stdout.write('\r' + msg)
         sys.stdout.flush()
         loading_char_idx += 1
-        time_sleep(0.5)
+        time.sleep(0.5)
 
 
 if __name__ == "__main__":
