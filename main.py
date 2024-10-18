@@ -24,7 +24,7 @@ import sys
 
 # %% GLOBAL VARS
 
-VERSION = "0.16"
+VERSION = "1.0"
 MAX_VERSION = None
 
 if getattr(sys, 'frozen', False):
@@ -47,7 +47,6 @@ UPLOAD_STATS_PATH = os_path.join(SCRIPT_DIR, UPLOAD_STATS_FILE_NAME)
 UPLOAD_INTERVAL_SECONDS = 300
 DOWNLOAD_INTERVAL_SECONDS = 900
 UPDATE_INTERVAL_SECONDS = 9000
-UPLOAD_REMINDER_INTERVAL_SECONDS = 21600
 HTTP_TRY_CAP = 5
 current_tries = {"upload_tries": 1, "download_tries": 1, "check_version_tries": 1}
 REQUEST_TIMEOUT = (60, 180)
@@ -120,14 +119,14 @@ def make_http_request(purpose, data_to_send=None):
             if response.status_code == 200:
                 current_tries[current_tries_key] = 1
             elif response.status_code == 400:
-                logger.critical(f"{process_response_text(response.text)}")
+                logger.debug(f"{process_response_text(response.text)}")
             else:
-                logger.critical(f"Status code: {response.status_code}")
+                logger.debug(f"Status code: {response.status_code}")
     
             response.raise_for_status()
             response_json = response.json()
     except Exception as e:
-        logger.critical(fail_debug_log)
+        logger.debug(fail_debug_log)
         current_tries[current_tries_key] += 1
         if current_tries[current_tries_key] > HTTP_TRY_CAP:
             raise type(e)(remove_endpoint_from_str(e)) from None
@@ -253,11 +252,24 @@ def write_to_upload_stats(upload_dict):
             upload_stats_str = outfile.read()
             if upload_stats_str:
                 upload_stats_json = json.loads(upload_stats_str)
-                upload_stats_json["total_upload_count"] += 1
-                upload_stats_json["total_items_updated"] += upload_dict["items_updated"]
-                upload_stats_json["individual_uploads"].append(upload_dict)
+                if "total_upload_count" in upload_stats_json:
+                    upload_stats_json["total_upload_count"] += 1
+                else:
+                    upload_stats_json["total_upload_count"] = 1
+                
+                if "total_items_updated" in upload_stats_json:
+                    upload_stats_json["total_items_updated"] += upload_dict["items_updated"]
+                else:
+                    upload_stats_json["total_items_updated"] = upload_dict["items_updated"]
+                    
+                if "individual_uploads" in upload_stats_json:
+                    upload_stats_json["individual_uploads"].append(upload_dict)
+                else:
+                    upload_stats_json["individual_uploads"] = [upload_dict]
+                    
                 with open(UPLOAD_STATS_PATH, "w") as outfile:
                     outfile.write(json_dumps(upload_stats_json, indent=4))
+                    
                 if upload_stats_json["total_upload_count"] in UPLOAD_STATS_ACHIEVEMENTS:
                     create_generic_notification("ACHIEVEMENT UNLOCKED!", f"{UPLOAD_STATS_ACHIEVEMENTS[upload_stats_json['total_upload_count']].replace('ACHIEVEMENT UNLOCKED!', '')}&#10;So far you helped update {upload_stats_json['total_items_updated']:,} items.")
                     logger.info(SEPARATOR)
@@ -268,13 +280,13 @@ def write_to_upload_stats(upload_dict):
                     logger.info(SEPARATOR)
                     logger.info("Steady uploader! Big thanks for another 50 uploads.")
                     logger.info(f"So far you uploaded {upload_stats_json['total_upload_count']:,} times and helped update {upload_stats_json['total_items_updated']:,} items.")
+                    
                 return
 
     upload_stats_json = {}
     upload_stats_json["total_upload_count"] = 1
     upload_stats_json["total_items_updated"] = upload_dict["items_updated"]
-    upload_stats_json["individual_uploads"] = []
-    upload_stats_json["individual_uploads"].append(upload_dict)
+    upload_stats_json["individual_uploads"] = [upload_dict]
     
     with open(UPLOAD_STATS_PATH, "w") as outfile:
         outfile.write(json_dumps(upload_stats_json, indent=4))
@@ -345,7 +357,7 @@ def get_tsm_auctiondb_lua_files(wtf_folder):
         raise ValueError(f"Couldn't find 'TradeSkillMaster_AuctionDB.lua' in any of the following locations: {str(file_path_list)}. Check if TSM is installed and if so, run a full scan first.")
 
 def upload_data():
-    ret = False
+    ret = None
     logger.debug("UPLOAD BLOCK")
     
     lua_file_paths, json_file = get_lua_file_paths()
@@ -397,7 +409,7 @@ def upload_data():
                 import_result = send_data_to_server(data_to_send_bytes)
             
                 if not import_result:
-                    logger.warning("Upload block - Upload failed silenty. Will retry")
+                    logger.info(f"Upload block - Upload failed. Will retry next round. ({current_tries['upload_tries']}/{HTTP_TRY_CAP})")
                     return ret
                 
                 logger.info("Upload block - " + import_result['message'])
@@ -443,12 +455,12 @@ def get_account_name_from_lua_file_path(lua_file_path):
     return None
 
 def download_data():
-    ret = False
+    ret = None
     logger.debug("DOWNLOAD BLOCK")
     if not is_ascension_running():
         downloaded_data = get_data_from_server()
         if not downloaded_data:
-            logger.warning("Download failed silenty. Will retry")
+            logger.debug(f"Download failed. Will retry next round. ({current_tries['download_tries']}/{HTTP_TRY_CAP})")
             return ret
         lua_file_paths, json_file = get_lua_file_paths()
         
@@ -527,31 +539,36 @@ def download_data():
     
     return ret
 
-
 def clear_message(msg):
     sys.stdout.write('\r' + ' ' * len(msg) + '\r')
     sys.stdout.flush()
     
 def check_for_new_versions():
     version_list = get_version_list()
-    newest_version = sorted(list(version_list), reverse=True)[0]
-    newer_versions = [v for k, v in version_list.items() if k > VERSION]
-    if newer_versions:
-        if any(newer_versions):
-            create_update_notification(mandatory=True)
-            logger.critical("There is a MANDATORY update for this app. Please download the latest release (EXE) here: 'https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/releases'")
-            input("Press any key to close the console")
-            sys.exit()
+    if version_list:
+        newest_version = sorted(list(version_list), reverse=True)[0]
+        newer_versions = {k: v for k, v in version_list.items() if k > VERSION}
+        if newer_versions:
+            logger.debug(f"""There are several newer versions: '{", ".join(newer_versions)}'""")
+            if any([k for k, v in newer_versions.items() if v]):
+                create_update_notification(mandatory=True)
+                logger.critical("There is a MANDATORY update for this app. Please download the latest release (EXE) here: 'https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/releases'")
+                input("Press any key to close the console")
+                sys.exit()
+            else:
+                create_update_notification(mandatory=False)
+                logger.critical("There is an update for this app. Please download the latest release (EXE) here: 'https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/releases'")
+            logger.info(SEPARATOR)
         else:
-            create_update_notification(mandatory=False)
-            logger.critical("There is an update for this app. Please download the latest release (EXE) here: 'https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/releases'")
-        logger.info(SEPARATOR)
-    return newest_version
+            logger.debug(f"Current version {VERSION} is the most up-to-date")
+            logger.debug(SEPARATOR)
+        return newest_version
+    return None
         
 def app_start_logging():
     logger.info(f"{APP_NAME} started")
     logger.info(SEPARATOR)
-    logger.info("Make sure you have Windows' notifications enabled (check GitHub FAQ).")
+    logger.info("Make sure you have Windows notifications enabled (check GitHub FAQ).")
     logger.info("DON'T BE A SCRUB, UPLOAD FREQUENTLY.")
     logger.info(SEPARATOR)
 
@@ -583,7 +600,7 @@ def main():
         if current_time - last_upload_time >= UPLOAD_INTERVAL_SECONDS:
             clear_message(msg)
             ret = upload_data()
-            if ret != False and ret != None: # ret in this context holds the number of updated items
+            if ret or ret == 0: # ret in this context holds the number of updated items
                 if ret:
                     write_to_upload_stats({'time': time_time(), 'version': VERSION, 'items_updated': ret})
                 logger.info(SEPARATOR)
@@ -594,13 +611,14 @@ def main():
         if current_time - last_download_time >= DOWNLOAD_INTERVAL_SECONDS:
             clear_message(msg)
             ret = download_data()
-            if ret != False and ret != None:
+            if ret:
                 logger.info(SEPARATOR)
             else:
                 logger.debug(SEPARATOR)
             last_download_time = current_time
         
-        if current_time - last_update_check >= UPDATE_INTERVAL_SECONDS:
+        if current_time - last_update_check >= UPDATE_INTERVAL_SECONDS or MAX_VERSION == None:
+            clear_message(msg)
             MAX_VERSION = check_for_new_versions()
             last_update_check = time_time()
             
