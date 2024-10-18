@@ -8,6 +8,11 @@ Thanks to [Szyler](https://github.com/Szyler) and [MummieSenpai](https://github.
 
 &nbsp;
 
+> [!CAUTION]
+> Currently have issues with Select Folder dialog. If your WTF folder is outside the default install path, this won't work for you at the moment. Working on a fix!
+
+&nbsp;
+
 > [!IMPORTANT]
 > You can download the EXE from the [Releases page](https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/releases).
 
