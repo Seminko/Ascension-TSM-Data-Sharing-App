@@ -8,6 +8,9 @@ Thanks to [Szyler](https://github.com/Szyler) and [MummieSenpai](https://github.
 
 &nbsp;
 
+> [!IMPORTANT]
+> You can download the EXE from the [Releases page](https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/releases).
+
 > [!CAUTION]
 > Will most likely be blocked by Windows Defender / Antivirus software
 > 
