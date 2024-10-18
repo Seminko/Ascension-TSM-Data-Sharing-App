@@ -1,17 +1,16 @@
-# import tkinter as tk        # Tkinter is now tkinter (lowercase)
-from tkinter import Tk
-from tkinter import filedialog  # tkFileDialog is now filedialog
+import asyncio
+from tkinter import Tk, filedialog
 
-def select_folder():
-    root = Tk()
-    root.withdraw()  # This hides the main window, you only want the dialog
+async def select_folder():
+    loop = asyncio.get_event_loop()
     
-    dirname = filedialog.askdirectory(parent=root, initialdir="/", title="Please select the 'WTF' directory")
-    
+    def run_in_thread():
+        root = Tk()
+        root.withdraw()  # Hide the main window
+        dirname = filedialog.askdirectory(parent=root, initialdir="/", title="Please select the 'WTF' directory")
+        root.destroy()  # Close the tkinter window
+        return dirname
+
+    # Run the folder selection in a separate thread
+    dirname = await loop.run_in_executor(None, run_in_thread)
     return dirname
-
-# kek = select_folder()
-# if not kek.endswith(r"/client/WTF"):
-#     raise ValueError("Selected wrong folder.")
-# # if you click Cancel an empty string is returned
-# print(f"'{kek}'")

@@ -1,6 +1,7 @@
 from os import path as os_path, walk as os_walk
 from platform import system
 from select_dir import select_folder
+import asyncio
 
 def get_possible_paths():
     """
@@ -48,7 +49,7 @@ def find_wtf_folder(starting_paths, target_folder_name="WTF"):
 
     return None
 
-def get_wtf_folder():
+def get_wtf_folder(logger):
     """
     Run the WTF folder search with user input for custom paths.
     """
@@ -61,9 +62,12 @@ def get_wtf_folder():
     if wtf_folder:
         return wtf_folder
     
-    folder_selected_path = select_folder()
-    if not folder_selected_path.endswith(r"/WTF"):
-        raise ValueError("Selected wrong folder. You must select the 'WTF' folder in Ascension directory.")
+    while True:
+        folder_selected_path = asyncio.run(select_folder())
+        if folder_selected_path.endswith(r"/WTF"):
+            break
+        else:
+            logger.info("Selected wrong folder. You must select the 'WTF' folder in Ascension directory. Try again")
         
     return folder_selected_path
 
