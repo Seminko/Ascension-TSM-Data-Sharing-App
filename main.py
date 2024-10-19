@@ -65,7 +65,7 @@ APP_NAME = f"Ascension TSM Data Sharing App v{VERSION}"
 SEPARATOR = "---------------------------------------------"
 
 UPLOAD_STATS_ACHIEVEMENTS = {
-    3: "ACHIEVEMENT UNLOCKED! You third upload! Steady pace, I like it!",
+    3: "ACHIEVEMENT UNLOCKED! Your third upload! Steady pace, I like it!",
     10: "ACHIEVEMENT UNLOCKED! Ten uploads! Heck yea!",
     25: "ACHIEVEMENT UNLOCKED! Twenty five uploads. Respectable!",
     50: "ACHIEVEMENT UNLOCKED! Half a hundred. You rock!",
@@ -291,9 +291,9 @@ def write_to_upload_stats(upload_dict):
     with open(UPLOAD_STATS_PATH, "w") as outfile:
         outfile.write(json.dumps(upload_stats_json, indent=4))
         
-    create_generic_notification("ACHIEVEMENT UNLOCKED!", f"You first upload! Keep it up! Proud of you!&#10;So far you helped update {upload_stats_json['total_items_updated']:,} items.")
+    create_generic_notification("ACHIEVEMENT UNLOCKED!", f"Your first upload! Keep it up! Proud of you!&#10;So far you helped update {upload_stats_json['total_items_updated']:,} items.")
     logger.info(SEPARATOR)
-    logger.info("ACHIEVEMENT UNLOCKED! You first upload! Keep it up! Proud of you!")
+    logger.info("ACHIEVEMENT UNLOCKED! Your first upload! Keep it up! Proud of you!")
     logger.info(f"So far you helped update {upload_stats_json['total_items_updated']:,} items.")
 
         
