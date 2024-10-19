@@ -47,7 +47,7 @@ UPLOAD_INTERVAL_SECONDS = 300
 DOWNLOAD_INTERVAL_SECONDS = 900
 UPDATE_INTERVAL_SECONDS = 9000
 HTTP_TRY_CAP = 5
-current_tries = {"upload_tries": 1, "download_tries": 1, "check_version_tries": 1}
+current_tries = {"upload_tries": 0, "download_tries": 0, "check_version_tries": 0}
 REQUEST_TIMEOUT = (60, 180)
 MAX_RETRIES = 7
 RETRY_STRATEGY = Retry(
@@ -116,7 +116,7 @@ def make_http_request(purpose, data_to_send=None):
     try:
         with eval(request_eval_str) as response:
             if response.status_code == 200:
-                current_tries[current_tries_key] = 1
+                current_tries[current_tries_key] = 0
             elif response.status_code == 400:
                 logger.debug(f"{process_response_text(response.text)}")
             else:
