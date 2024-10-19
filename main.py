@@ -557,7 +557,7 @@ def check_for_new_versions():
                 sys.exit()
             else:
                 create_update_notification(mandatory=False)
-                logger.critical("There is an update for this app. Please download the latest release (EXE) here: 'https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/releases'")
+                logger.critical("There is an optional update for this app. You can download the latest release (EXE) here: 'https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/releases'")
             logger.info(SEPARATOR)
         else:
             logger.debug(f"Current version {VERSION} is the most up-to-date")

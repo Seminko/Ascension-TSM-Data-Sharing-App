@@ -12,8 +12,8 @@ def create_update_notification(mandatory=False):
         url = "https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/releases"
         scenario = " scenario='urgent'"
     else:
-        title = "Update Available!"
-        desc = "Click the button below, GitHub releases page will open in your default browser."
+        title = "Optional Update Available"
+        desc = "If you decide to update, click the button below, GitHub releases page will open in your default browser."
         url = "https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/releases"
         scenario = ""
     
