@@ -1,9 +1,9 @@
 import subprocess
 import xml.etree.ElementTree as ET
-from os import remove
+import os
 from datetime import datetime
 import re
-from time import strftime as time_strftime
+import time
 
 def create_task_xml(task_name, exe_path, working_directory, xml_path, logger):
     # Root element
@@ -97,7 +97,7 @@ def delete_task(task_name, logger):
 
 def create_task_from_xml(task_name, exe_path, working_directory, xml_path, logger):
     new_line_regex = r"(?:\n+|\s\s+)"
-    input_result = input(f"{time_strftime('%Y-%m-%d %H:%M:%S,%MS')} - Would you like to create a scheduled task so that the app runs on startup? [Y/N]: ")
+    input_result = input(f"{time.strftime('%Y-%m-%d %H:%M:%S,%MS')} - Would you like to create a scheduled task so that the app runs on startup? [Y/N]: ")
     logger.debug(f"User entered: '{input_result}'")
     if input_result.lower() in ["y", "yes", "ye", "ya", "ys", "yea", "yeh" "yeah"]:
         create_task_xml(task_name, exe_path, working_directory, xml_path, logger)
@@ -120,7 +120,7 @@ def create_task_from_xml(task_name, exe_path, working_directory, xml_path, logge
             logger.exception("Handled exception")
         finally:
             try:
-                remove(xml_path)
+                os.remove(xml_path)
                 logger.debug(f"Task definition XML '{xml_path}' removed successfully")
             except PermissionError as e:
                 logger.debug(f"Removing task definition XML '{xml_path}' failed due to: '{str(repr(e))}'")
