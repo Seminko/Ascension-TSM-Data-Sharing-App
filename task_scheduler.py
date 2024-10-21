@@ -80,8 +80,9 @@ def delete_task(task_name, logger):
             '/tn', task_name,
             '/f'  # Force deletion without confirmation
         ], capture_output=True, text=True, check=True)
-        if not "successfully deleted" in result.stdout:
-            raise Exception(result.stdout)
+        # "stdout is not actually always english :("
+        # if not "successfully deleted" in result.stdout:
+        #     raise Exception(result.stdout)
         logger.debug(f"Scheduled task '{task_name}' deleted successfully.")
     except subprocess.CalledProcessError as e:
         logger.debug(f"""Failed to delete startup task - probably because it doesn't exist / has never existed. Error: '{re.sub(new_line_regex, " ", e.stderr).strip()}'""")
@@ -109,8 +110,9 @@ def create_task_from_xml(task_name, exe_path, working_directory, xml_path, logge
                 '/xml', xml_path,      # Path to the XML file
                 '/f'                   # Force creation (overwrite if exists)
             ], capture_output=True, text=True, check=True)
-            if not "successfully been created" in result.stdout:
-                raise Exception(re.sub(new_line_regex, " ", result.stdout).strip())
+            # "stdout is not actually always english :("
+            # if not "successfully been created" in result.stdout:
+            #     raise Exception(re.sub(new_line_regex, " ", result.stdout).strip())
             logger.info(f"Scheduled task '{task_name}' created successfully")
         except subprocess.CalledProcessError as e:
             logger.critical(f"""Failed to create startup task. Error: '{re.sub(new_line_regex, " ", e.stderr).strip()}'""")
