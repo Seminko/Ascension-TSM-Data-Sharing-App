@@ -354,7 +354,9 @@ def get_tsm_auctiondb_lua_files(wtf_folder):
     if found_file_path_list:
         return found_file_path_list
     else:
-        raise ValueError(f"Couldn't find 'TradeSkillMaster_AuctionDB.lua' in any of the following locations: {str(file_path_list)}. Check if TSM is installed and if so, run a full scan first.")
+        logger.critical(f"Couldn't find 'TradeSkillMaster_AuctionDB.lua' in any of the following locations: {str([redact_account_name_from_lua_file_path(f) for f in file_path_list])}. Check if TSM is installed and if so, run a full scan first.")
+        input("Press any key to close the console")
+        sys.exit()
 
 def upload_data():
     ret = None
