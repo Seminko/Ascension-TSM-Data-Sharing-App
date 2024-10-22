@@ -379,7 +379,7 @@ def upload_data():
         full_file_info = get_lua_file_path_info(lua_file_paths)
         
         if files_new:
-            logger.info("Upload block - New LUA file(s) detected")
+            logger.info("Upload block - New LUA file(s) detected (probably a newly added account)")
             file_info_new_files = [{"file_path": f["file_path"], "last_modified": f["last_modified"]} for f in full_file_info if f["file_path"] in files_new]
             json_file["file_info"].extend(file_info_new_files)
         
