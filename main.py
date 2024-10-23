@@ -360,7 +360,7 @@ def get_tsm_auctiondb_lua_files(wtf_folder):
 
 def upload_data():
     ret = None
-    logger.debug("UPLOAD BLOCK")
+    logger.debug("UPLOAD SECTION")
     
     lua_file_paths, json_file = get_lua_file_paths()
     
@@ -379,7 +379,7 @@ def upload_data():
         full_file_info = get_lua_file_path_info(lua_file_paths)
         
         if files_new:
-            logger.info("Upload block - New LUA file(s) detected (probably a newly added account)")
+            logger.info("Upload section - New LUA file(s) detected (probably a newly added account)")
             file_info_new_files = [{"file_path": f["file_path"], "last_modified": f["last_modified"]} for f in full_file_info if f["file_path"] in files_new]
             json_file["file_info"].extend(file_info_new_files)
         
@@ -401,7 +401,7 @@ def upload_data():
             dev_server_regex = r"(?i)\b(?:alpha|dev|development|ptr|qa|recording)\b"
             updated_realms_to_send = [r for r in updated_realms if not re_search(dev_server_regex, r["realm"])]
             if updated_realms_to_send:
-                logger.info(f"""Upload block - New scan timestamp found for realms: {", ".join(["'" + r["realm"] + "'" for r in updated_realms_to_send])}""")
+                logger.info(f"""Upload section - New scan timestamp found for realms: {", ".join(["'" + r["realm"] + "'" for r in updated_realms_to_send])}""")
                 for r in updated_realms_to_send:
                     r["username"] = hash_username(r["username"])
 
@@ -411,10 +411,10 @@ def upload_data():
                 import_result = send_data_to_server(data_to_send_bytes)
             
                 if not import_result:
-                    logger.info(f"Upload block - Upload failed. Will retry next round. ({current_tries['upload_tries']}/{HTTP_TRY_CAP})")
+                    logger.info(f"Upload section - Upload failed. Will retry next round. ({current_tries['upload_tries']}/{HTTP_TRY_CAP})")
                     return ret
                 
-                logger.info("Upload block - " + import_result['message'])
+                logger.info("Upload section - " + import_result['message'])
                 ret = import_result['update_count']
             else:
                 logger.debug("New scan timestamp found but only for Dev/PTR/QA etc servers, ignoring")
@@ -430,7 +430,7 @@ def upload_data():
             interruptible_sleep(15) # allow for server-side file generation
         else:
             write_json_file(json_file)
-            logger.debug("Upload block - Despite LUA file(s) being updated, there are no new scan timestamps")
+            logger.debug("Upload section - Despite LUA file(s) being updated, there are no new scan timestamps")
     else:
         logger.debug("No changes detected in LUA file(s)")
         
@@ -458,7 +458,7 @@ def get_account_name_from_lua_file_path(lua_file_path):
 
 def download_data():
     ret = None
-    logger.debug("DOWNLOAD BLOCK")
+    logger.debug("DOWNLOAD SECTION")
     if not is_ascension_running():
         downloaded_data = get_data_from_server()
         if not downloaded_data:
@@ -517,7 +517,7 @@ def download_data():
         
         if need_to_update_json:
             ret = True
-            logger.info(f"""Download block - LUA file(s) updated with data for realms: '{", ".join(updated_realms)}'""")
+            logger.info(f"""Download section - LUA file(s) updated with data for realms: '{", ".join(updated_realms)}'""")
             logger.debug("Json data needs to be updated")
             for download_obj in [d for d in downloaded_data if d["realm"] in updated_realms]:
                 logger.debug(f"""Checking realm '{download_obj["realm"]}'""")
