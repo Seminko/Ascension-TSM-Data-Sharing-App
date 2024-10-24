@@ -604,7 +604,7 @@ def main():
             ret = upload_data()
             if ret or ret == 0: # ret in this context holds the number of updated items
                 if ret:
-                    write_to_upload_stats({'time': time.time(), 'version': VERSION, 'items_updated': ret})
+                    write_to_upload_stats({'time': current_time , 'version': VERSION, 'items_updated': ret})
                 logger.info(SEPARATOR)
             else:
                 logger.debug(SEPARATOR)
@@ -622,10 +622,20 @@ def main():
         if current_time - last_update_check >= UPDATE_INTERVAL_SECONDS or MAX_VERSION == None:
             clear_message(msg)
             MAX_VERSION = check_for_new_versions()
-            last_update_check = time.time()
+            last_update_check = current_time 
             
+        if UPLOAD_INTERVAL_SECONDS - (current_time - last_upload_time) > DOWNLOAD_INTERVAL_SECONDS - (current_time - last_download_time) :
+            logger.debug(f"updating last_download_time from {last_download_time}")
+            last_download_time += ((UPLOAD_INTERVAL_SECONDS - (current_time - last_upload_time)) - (DOWNLOAD_INTERVAL_SECONDS - (current_time - last_download_time)))
+            logger.debug(f"updating last_download_time to {last_download_time}")
+        if UPLOAD_INTERVAL_SECONDS - (current_time - last_upload_time) > UPDATE_INTERVAL_SECONDS - (current_time - last_update_check):
+            logger.debug(f"updating last_update_check from {last_update_check}")
+            last_update_check += ((UPLOAD_INTERVAL_SECONDS - (current_time - last_upload_time)) - (UPDATE_INTERVAL_SECONDS - (current_time - last_update_check)))
+            logger.debug(f"updating last_update_check to {last_update_check}")
+
         old_msg = msg
-        msg = time.strftime("%Y-%m-%d %H:%M:%S,000") + " - " + loading_chars[loading_char_idx % len(loading_chars)] + " - Detecting changes (Next upload in " + str(round((UPLOAD_INTERVAL_SECONDS - (current_time - last_upload_time))/60, 1)) + "min / Next download in " + str(round((DOWNLOAD_INTERVAL_SECONDS - (current_time - last_download_time))/60,1)) + "min)"
+        msg = time.strftime("%Y-%m-%d %H:%M:%S,000") + " - " + loading_chars[loading_char_idx % len(loading_chars)] + " - Detecting changes (Next upload in " + str(round(max((UPLOAD_INTERVAL_SECONDS - (current_time - last_upload_time))/60, 0), 1)) + "min / Next download in " + str(round(max((DOWNLOAD_INTERVAL_SECONDS - (current_time - last_download_time)) / 60, 0), 1)) + "min)"
+ 
         if len(old_msg) > len(msg):
             clear_message(old_msg)
         sys.stdout.write('\r' + msg)
