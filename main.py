@@ -62,7 +62,8 @@ ADAPTER = HTTPAdapter(max_retries=RETRY_STRATEGY)
 NUMBER_OF_LOGS_TO_KEEP = 50
 
 APP_NAME = f"Ascension TSM Data Sharing App v{VERSION}"
-SEPARATOR = "---------------------------------------------"
+MAIN_SEPARATOR = "==========================================================================================="
+SEPARATOR = "-------------------------------------------------------------------------------------------"
 
 UPLOAD_STATS_ACHIEVEMENTS = {
     3: "ACHIEVEMENT UNLOCKED! Your third upload! Steady pace, I like it!",
@@ -569,7 +570,7 @@ def check_for_new_versions():
         
 def app_start_logging():
     logger.info(f"{APP_NAME} started")
-    logger.info(SEPARATOR)
+    logger.info(MAIN_SEPARATOR)
     logger.info("Make sure you have Windows notifications enabled (check GitHub FAQ).")
     logger.info("DON'T BE A SCRUB, UPLOAD FREQUENTLY.")
     logger.info(SEPARATOR)
