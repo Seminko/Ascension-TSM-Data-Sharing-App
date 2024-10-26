@@ -316,7 +316,7 @@ def get_last_complete_scan(lua_file_path):
         data = luadata_serialization.unserialize(outfile.read(), encoding="utf-8", multival=False)
         realm_list = []
         if "realm" in data:
-            for realm in data["realm"]:
+            for realm in {k:v for k, v in data["realm"].items() if "scanData" in data["realm"][k]}:
                 obj = {}
                 obj["realm"] = realm
                 obj["last_complete_scan"] = data["realm"][realm]["lastCompleteScan"]
