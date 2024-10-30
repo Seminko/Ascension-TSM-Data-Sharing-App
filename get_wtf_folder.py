@@ -1,7 +1,15 @@
-from os import path as os_path, walk as os_walk
-from platform import system
+# %% LOCAL IMPORTS
+
+from logger_config import logger
 from select_dir import select_folder
+
+# %% MODULE  IMPORTS
+
+import os
+from platform import system
 import asyncio
+
+# %% FUNCTIONS
 
 def get_possible_paths():
     """
@@ -9,47 +17,32 @@ def get_possible_paths():
 
     :return: A list of paths to search.
     """
-    os_type = system()
+    os.type = system()
     possible_paths = []
 
-    if os_type != "Windows":
+    if os.type != "Windows":
         raise Exception("The app is only available for Windows")
 
-    drives = [f"{chr(x)}:\\" for x in range(65, 91) if os_path.exists(f"{chr(x)}:\\")]
+    drives = [f"{chr(x)}:\\" for x in range(65, 91) if os.path.exists(f"{chr(x)}:\\")]
     for drive in drives:
         # Add default known locations
-        possible_paths.append(os_path.join(drive, "Program Files", "Ascension Launcher", "resources", "client"))
-        possible_paths.append(os_path.join(drive, "Program Files (x86)", "Ascension Launcher", "resources", "client"))
-        possible_paths.append(os_path.join(drive, "Games", "Ascension Launcher", "resources", "client"))
-        possible_paths.append(os_path.join(drive, "Ascension Launcher", "resources", "client"))
+        possible_paths.append(os.path.join(drive, "Program Files", "Ascension Launcher", "resources", "client"))
+        possible_paths.append(os.path.join(drive, "Program Files (x86)", "Ascension Launcher", "resources", "client"))
+        possible_paths.append(os.path.join(drive, "Games", "Ascension Launcher", "resources", "client"))
+        possible_paths.append(os.path.join(drive, "Ascension Launcher", "resources", "client"))
     # # LINUX IS UNTESTED
-    # elif os_type == "Linux":
-    #     home_dir = os_path.expanduser("~")
+    # elif os.type == "Linux":
+    #     home_dir = os.path.expanduser("~")
     #     # Add default known locations
-    #     possible_paths.append(os_path.join(home_dir, ".ascension", "client"))
-    #     possible_paths.append(os_path.join(home_dir, "Games", "Ascension Launcher", "resources", "client"))
-    #     possible_paths.append(os_path.join(home_dir, "Ascension", "resources", "client"))
-    #     possible_paths.append(os_path.join("/", "opt", "Ascension Launcher", "resources", "client"))
-    #     possible_paths.append(os_path.join("/", "usr", "local", "Ascension Launcher", "resources", "client"))
+    #     possible_paths.append(os.path.join(home_dir, ".ascension", "client"))
+    #     possible_paths.append(os.path.join(home_dir, "Games", "Ascension Launcher", "resources", "client"))
+    #     possible_paths.append(os.path.join(home_dir, "Ascension", "resources", "client"))
+    #     possible_paths.append(os.path.join("/", "opt", "Ascension Launcher", "resources", "client"))
+    #     possible_paths.append(os.path.join("/", "usr", "local", "Ascension Launcher", "resources", "client"))
 
     return possible_paths
 
-def find_wtf_folder(starting_paths, target_folder_name="WTF"):
-    """
-    Search for the WTF folder within the specified starting paths.
-
-    :param starting_paths: List of paths where the search should begin.
-    :param target_folder_name: The name of the folder to search for.
-    :return: The full path to the WTF folder if found, otherwise None.
-    """
-    for starting_path in starting_paths:
-        for root, dirs, files in os_walk(starting_path):
-            if target_folder_name in dirs:
-                return os_path.join(root, target_folder_name)
-
-    return None
-
-def get_wtf_folder(logger):
+def get_wtf_folder():
     """
     Run the WTF folder search with user input for custom paths.
     """
@@ -63,6 +56,7 @@ def get_wtf_folder(logger):
         return wtf_folder
     
     while True:
+        logger.info("Couldn't find WTF folder automatically. Select it yourself")
         folder_selected_path = asyncio.run(select_folder())
         if folder_selected_path.endswith(r"/WTF"):
             break
@@ -71,5 +65,17 @@ def get_wtf_folder(logger):
         
     return folder_selected_path
 
+def find_wtf_folder(starting_paths, target_folder_name="WTF"):
+    """
+    Search for the WTF folder within the specified starting paths.
 
-# get_wtf_folder()
+    :param starting_paths: List of paths where the search should begin.
+    :param target_folder_name: The name of the folder to search for.
+    :return: The full path to the WTF folder if found, otherwise None.
+    """
+    for starting_path in starting_paths:
+        for root, dirs, files in os.walk(starting_path):
+            if target_folder_name in dirs:
+                return os.path.join(root, target_folder_name)
+
+    return None

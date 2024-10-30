@@ -1,369 +1,36 @@
 # %% LOCAL IMPORTS
 
-from toast_notification import create_update_notification, create_generic_notification # this needs to be before get_wft_folder (if I remember correctly)
-from get_wtf_folder import get_wtf_folder
-from hash_username import hash_username
-from get_endpoints import get_upload_endpoint, get_download_endpoint, remove_endpoint_from_str, get_version_endpoint
-from task_scheduler import create_task_from_xml
+from logger_config import logger
+from get_discord_user_id import check_discord_id_nickname
+import lua_json_helper
+import server_communication
 import luadata_serialization
+from hash_username import hash_username
+import generic_helper
 
 # %% MODULE IMPORTS
 
 import os
 import json
 import time
-import logging
-import requests
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
-from re import sub as re_sub, search as re_search
-from psutil import process_iter
+import re
 import io
 import sys
 
 # %% GLOBAL VARS
-
-VERSION = "1.1.2"
-MAX_VERSION = None
-
-if getattr(sys, 'frozen', False):
-    # Running in PyInstaller executable
-    SCRIPT_DIR = os.path.dirname(sys.executable)
-    EXE_PATH = sys.executable
-else:
-    # Running as a regular Python script
-    SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-    EXE_PATH = os.path.abspath(__file__)
-    
-XML_TASK_DEFINITION_PATH = os.path.join(SCRIPT_DIR, "startup_task_definition.xml")
-    
-JSON_FILE_NAME = "update_times.json"
-JSON_PATH = os.path.join(SCRIPT_DIR, JSON_FILE_NAME)
-
-UPLOAD_STATS_FILE_NAME = "upload_stats.json"
-UPLOAD_STATS_PATH = os.path.join(SCRIPT_DIR, UPLOAD_STATS_FILE_NAME)
-
-UPLOAD_INTERVAL_SECONDS = 300
-DOWNLOAD_INTERVAL_SECONDS = 900
-UPDATE_INTERVAL_SECONDS = 9000
-HTTP_TRY_CAP = 5
-current_tries = {"upload_tries": 0, "download_tries": 0, "check_version_tries": 0}
-REQUEST_TIMEOUT = (60, 180)
-MAX_RETRIES = 7
-RETRY_STRATEGY = Retry(
-    total=MAX_RETRIES,  # Retry up to 5 times
-    backoff_factor=5,  # Wait 5, 10, 20, 40, 80 seconds between retries
-    status_forcelist=[500, 502, 503, 504],  # Retry on these HTTP status codes
-    allowed_methods=["GET", "POST"],  # Apply to these HTTP methods
-    raise_on_status=False,  # Don't raise exception immediately on bad status
-)
-ADAPTER = HTTPAdapter(max_retries=RETRY_STRATEGY)
-
-NUMBER_OF_LOGS_TO_KEEP = 50
-
-APP_NAME = f"Ascension TSM Data Sharing App v{VERSION}"
-MAIN_SEPARATOR = "==========================================================================================="
-SEPARATOR = "-------------------------------------------------------------------------------------------"
-
-UPLOAD_STATS_ACHIEVEMENTS = {
-    3: "ACHIEVEMENT UNLOCKED! Your third upload! Steady pace, I like it!",
-    10: "ACHIEVEMENT UNLOCKED! Ten uploads! Heck yea!",
-    25: "ACHIEVEMENT UNLOCKED! Twenty five uploads. Respectable!",
-    50: "ACHIEVEMENT UNLOCKED! Half a hundred. You rock!",
-    100: "ACHIEVEMENT UNLOCKED! Hundred uploads??? Epic!",
-    1000: "ACHIEVEMENT UNLOCKED! A thousand uploads. We're getting into legendary territory!",
-    10000: "ACHIEVEMENT UNLOCKED! TEN THOUSAND! OK, consider yourself a LEGEND!",
-    100000: "ACHIEVEMENT UNLOCKED! Hundred thousand? I mean, other players LOVE you for this, but if you continue there's gonna have to be an intervention :-P",
-    1000000: "ACHIEVEMENT UNLOCKED! MEGA! I mean a million. You're now on par with the Emperor of Mankind. Something tells me we forgot about that intervention we mentioned at 100k uploads...",
-    10000000: "ACHIEVEMENT UNLOCKED! TEN MILLION UPLOADS!!! Real talk, dude, you NEED to stop...",
-}
+max_version = None
+from config import VERSION, UPLOAD_INTERVAL_SECONDS, HTTP_TRY_CAP, \
+    DOWNLOAD_INTERVAL_SECONDS, UPDATE_INTERVAL_SECONDS, SEPARATOR,\
+    DISCORD_ID_NICKNAME_INTERVAL_SECONDS, LOADING_CHARS
+from server_communication import current_tries
 
 # %% FUNCTIONS
-
-def generate_chunks(file_object, chunk_size=1024):
-    while True:
-        chunk = file_object.read(chunk_size)
-        if not chunk:
-            break
-        yield chunk
-
-def process_response_text(response_text):
-    new_line_double_space_regex = r"(?:\n+|\s\s+)"
-    html_css_regex = r'(?:[a-zA-Z0-9-_.]+\s\{.*?\}|\\(?=)|<style>.*<\/style>|<[^<]+?>|^\"|Something went wrong :-\(\s*\.?\s*)'
-    return re_sub(new_line_double_space_regex, " ", re_sub(html_css_regex, '', response_text)).strip()
-
-def make_http_request(purpose, data_to_send=None):
-    global current_tries
-    if purpose == "send_data_to_server":
-        init_debug_log = "Sending data to server"
-        fail_debug_log = "Sending to DB failed"
-        current_tries_key = "upload_tries"
-        url = get_upload_endpoint()
-        request_eval_str = f"session.post('{url}', data=generate_chunks(data_to_send), timeout=REQUEST_TIMEOUT, stream=True)"
-    elif purpose == "get_data_from_server":
-        init_debug_log = "Downloading data from server"
-        fail_debug_log = "Downloading from DB failed"
-        current_tries_key = "download_tries"
-        url = get_download_endpoint()
-        request_eval_str = f"session.get('{url}', timeout=REQUEST_TIMEOUT)"
-    elif purpose == "check_version":
-        init_debug_log = "Checking what is the most up-to-date version"
-        fail_debug_log = "Check most up-to-date version failed"
-        current_tries_key = "check_version_tries"
-        url = get_version_endpoint()
-        request_eval_str = f"session.get('{url}', timeout=REQUEST_TIMEOUT)"
-    
-    logger.debug(init_debug_log)
-    try:
-        with eval(request_eval_str) as response:
-            if response.status_code == 200:
-                current_tries[current_tries_key] = 0
-            elif response.status_code == 400:
-                logger.debug(f"{process_response_text(response.text)}")
-            else:
-                logger.debug(f"Status code: {response.status_code}")
-    
-            response.raise_for_status()
-            response_json = response.json()
-    except Exception as e:
-        logger.debug(fail_debug_log)
-        current_tries[current_tries_key] += 1
-        if current_tries[current_tries_key] > HTTP_TRY_CAP:
-            raise type(e)(remove_endpoint_from_str(e)) from None
-        return None
-    
-    return response_json
-
-def send_data_to_server(data_to_send):
-    return make_http_request("send_data_to_server", data_to_send)
-
-def get_data_from_server():
-    return make_http_request("get_data_from_server")
-
-def get_version_list():
-    return make_http_request("check_version")
-    
-def interruptible_sleep(seconds):
-    start_time = time.time()
-    end_time = start_time + seconds
-    
-    while time.time() < end_time:
-        time.sleep(0.1)  # Sleep in smaller increments
-
-def get_files(dst_folder):
-    return [f for f in os.listdir(dst_folder) if os.path.isfile(os.path.join(dst_folder, f))]
-
-def remove_old_logs():
-    logger.debug("Checking for old logs to be removed")
-    dst_folder = os.path.join(SCRIPT_DIR, 'logs')
-    file_list = get_files(dst_folder)
-    if len(file_list) > NUMBER_OF_LOGS_TO_KEEP:
-        full_path_list = [dst_folder + "\\" + i for i in file_list]
-        full_path_list.sort(key=os.path.getmtime, reverse=True)
-        logs_to_remove = full_path_list[NUMBER_OF_LOGS_TO_KEEP:]
-        word = "logs"
-        if len(logs_to_remove) == 1:
-            word = "log"
-        logger.debug(f"Removing {len(logs_to_remove)} oldest {word}") 
-        for log_to_remove in logs_to_remove:
-            try:
-                os.remove(log_to_remove)
-            except PermissionError as e:
-                logger.debug(f"Removing log '{log_to_remove}' failed due to: '{str(repr(e))}'") 
-    else:
-        logger.debug("No logs to be removed")
-    logger.debug(SEPARATOR)
-
-class NoExceptionFilter(logging.Filter):
-    def filter(self, record):
-        # If the log record is at EXCEPTION level, filter it out (return False)
-        return not record.exc_info
-    
-def get_logger():
-    # Create a logger
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.DEBUG)  # Set the overall log level to DEBUG
-    
-    # Console handler with INFO level
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
-    console_handler.addFilter(NoExceptionFilter())
-    console_formatter = logging.Formatter('%(asctime)s - %(message)s')
-    console_handler.setFormatter(console_formatter)
-    logger.addHandler(console_handler)
-    
-    # Time Rotating File handler with DEBUG level
-    log_dir = os.path.join(SCRIPT_DIR, 'logs')
-    if not os.path.exists(log_dir):
-        os.makedirs(log_dir)
-    log_file = os.path.join(log_dir, 'ascension_tsm_data_sharing_app')
-    
-    timestamp = time.strftime("%Y%m%d_%H%M%S")
-    log_file_with_suffix = f"{log_file}_v{VERSION}_{timestamp}"
-
-    file_handler = logging.FileHandler(f"{log_file_with_suffix}.log")
-    file_handler.setLevel(logging.DEBUG)
-    file_formatter = logging.Formatter('%(asctime)s - %(levelname)-8s - [%(funcName)s]: %(message)s')
-    file_handler.setFormatter(file_formatter)
-    logger.addHandler(file_handler)
-    
-    return logger
-
-def json_file_initialized():
-    logger.debug("Checking if json file is initialized")
-    if next((f for f in os.listdir() if f == JSON_FILE_NAME), None):
-        return True
-    return False
-
-def get_latest_scans_across_all_accounts_and_realms(file_info):
-    logger.debug("Getting latest scan ascross all accounts and realms")
-    last_updates = [{"realm": r["realm"], "last_complete_scan": r["last_complete_scan"], "scan_data": r["scan_data"], "username": re_search(r"(?<=\\Account\\)([^\\]+)", f["file_path"])[0]} for f in file_info for r in f["realm_last_complete_scan"]]
-    active_realms_unique = list(set([r["realm"] for r in last_updates]))
-    latest_data = []
-    for realm in active_realms_unique:
-        obj = {}
-        obj["realm"] = realm
-        obj["last_complete_scan"] = max([r["last_complete_scan"] for r in last_updates if r["realm"] == realm])
-        obj["username"] = next(r["username"] for r in last_updates if r["realm"] == realm and r["last_complete_scan"] == obj["last_complete_scan"])
-        obj["scan_data"] = next(r["scan_data"] for r in last_updates if r["realm"] == realm and r["last_complete_scan"] == obj["last_complete_scan"])
-        latest_data.append(obj)
-    return latest_data
-
-def initiliaze_json():
-    create_task_from_xml(task_name="TSM Data Sharing App", exe_path=EXE_PATH, working_directory=SCRIPT_DIR, xml_path=XML_TASK_DEFINITION_PATH, logger=logger)
-    logger.info(SEPARATOR)
-    logger.info(f"Initializing '{JSON_FILE_NAME}'")
-    wtf_folder = get_wtf_folder(logger)
-    logger.info(f"WTF folder found at: '{wtf_folder}'")
-    lua_file_paths = get_tsm_auctiondb_lua_files(wtf_folder)
-    file_info = get_lua_file_path_info(lua_file_paths)
-    latest_data = get_latest_scans_across_all_accounts_and_realms(file_info)
-    
-    logger.debug("Creating json file")
-    obj = {}
-    obj["wtf_path"] = wtf_folder
-    obj["file_info"] = [{"file_path": f["file_path"], "last_modified": f["last_modified"]} for f in file_info]
-    obj["latest_data"] = latest_data
-    write_json_file(obj)
-    logger.info(SEPARATOR)
-    
-def write_to_upload_stats(upload_dict):
-    if os.path.exists(UPLOAD_STATS_PATH):
-        with open(UPLOAD_STATS_PATH, "r") as outfile:
-            upload_stats_str = outfile.read()
-            if upload_stats_str:
-                upload_stats_json = json.loads(upload_stats_str)
-                if "total_upload_count" in upload_stats_json:
-                    upload_stats_json["total_upload_count"] += 1
-                else:
-                    upload_stats_json["total_upload_count"] = 1
-                
-                if "total_items_updated" in upload_stats_json:
-                    upload_stats_json["total_items_updated"] += upload_dict["items_updated"]
-                else:
-                    upload_stats_json["total_items_updated"] = upload_dict["items_updated"]
-                    
-                if "individual_uploads" in upload_stats_json:
-                    upload_stats_json["individual_uploads"].append(upload_dict)
-                else:
-                    upload_stats_json["individual_uploads"] = [upload_dict]
-                    
-                with open(UPLOAD_STATS_PATH, "w") as outfile:
-                    outfile.write(json.dumps(upload_stats_json, indent=4))
-                    
-                if upload_stats_json["total_upload_count"] in UPLOAD_STATS_ACHIEVEMENTS:
-                    create_generic_notification("ACHIEVEMENT UNLOCKED!", f"{UPLOAD_STATS_ACHIEVEMENTS[upload_stats_json['total_upload_count']].replace('ACHIEVEMENT UNLOCKED!', '')}&#10;So far you helped update {upload_stats_json['total_items_updated']:,} items.")
-                    logger.info(SEPARATOR)
-                    logger.info(UPLOAD_STATS_ACHIEVEMENTS[upload_stats_json['total_upload_count']])
-                    logger.info(f"So far you helped update {upload_stats_json['total_items_updated']:,} items.")
-                elif upload_stats_json['total_upload_count'] % 50 == 0:
-                    create_generic_notification("Steady uploader!", f"Big thanks for another 50 uploads.&#10;So far you uploaded {upload_stats_json['total_upload_count']:,} times and helped update {upload_stats_json['total_items_updated']:,} items.")
-                    logger.info(SEPARATOR)
-                    logger.info("Steady uploader! Big thanks for another 50 uploads.")
-                    logger.info(f"So far you uploaded {upload_stats_json['total_upload_count']:,} times and helped update {upload_stats_json['total_items_updated']:,} items.")
-                    
-                return
-
-    upload_stats_json = {}
-    upload_stats_json["total_upload_count"] = 1
-    upload_stats_json["total_items_updated"] = upload_dict["items_updated"]
-    upload_stats_json["individual_uploads"] = [upload_dict]
-    
-    with open(UPLOAD_STATS_PATH, "w") as outfile:
-        outfile.write(json.dumps(upload_stats_json, indent=4))
-        
-    create_generic_notification("ACHIEVEMENT UNLOCKED!", f"Your first upload! Keep it up! Proud of you!&#10;So far you helped update {upload_stats_json['total_items_updated']:,} items.")
-    logger.info(SEPARATOR)
-    logger.info("ACHIEVEMENT UNLOCKED! Your first upload! Keep it up! Proud of you!")
-    logger.info(f"So far you helped update {upload_stats_json['total_items_updated']:,} items.")
-
-        
-def write_json_file(json_object):
-    logger.debug("Saving json file")
-    with open(JSON_PATH, "w") as outfile:
-        json_string = json.dumps(json_object, indent=4)
-        outfile.write(json_string)
-        
-def read_json_file():
-    logger.debug("Reading json file")
-    with open(JSON_PATH, "r") as outfile:
-        json_object = json.loads(outfile.read())
-        return json_object
-    
-def get_last_complete_scan(lua_file_path):
-    logger.debug(f"Getting last complete scans for '{redact_account_name_from_lua_file_path(lua_file_path)}'")
-    with open(lua_file_path, "r") as outfile:
-        data = luadata_serialization.unserialize(outfile.read(), encoding="utf-8", multival=False)
-        realm_list = []
-        if "realm" in data:
-            for realm in {k:v for k, v in data["realm"].items() if "scanData" in data["realm"][k]}:
-                obj = {}
-                obj["realm"] = realm
-                obj["last_complete_scan"] = data["realm"][realm]["lastCompleteScan"]
-                obj["scan_data"] = data["realm"][realm]["scanData"]
-                realm_list.append(obj)
-        return realm_list
-
-def get_lua_file_path_info(lua_file_paths):
-    file_updated_list = []
-    for lua_file_path in lua_file_paths:
-        logger.debug(f"Getting lua file path info for '{redact_account_name_from_lua_file_path(lua_file_path)}'")
-        obj = {}
-        obj["file_path"] = lua_file_path
-        obj["last_modified"] = os.path.getmtime(lua_file_path)
-        obj["realm_last_complete_scan"] = get_last_complete_scan(lua_file_path)
-        file_updated_list.append(obj)
-    return file_updated_list
-
-def get_tsm_auctiondb_lua_files(wtf_folder):
-    logger.debug("Getting all lua files for all accounts")
-    "Gets 'TradeSkillMaster_AuctionDB.lua' file paths for all accounts"
-    account_names = os.listdir(os.path.join(wtf_folder, "Account"))
-    
-    found_file_path_list = []
-    file_path_list = []
-    for account_name in account_names:
-        path = os.path.join(wtf_folder,
-                            "Account",
-                            account_name,
-                            "SavedVariables",
-                            "TradeSkillMaster_AuctionDB.lua")
-        file_path_list.append(path)
-        if os.path.isfile(path):
-            found_file_path_list.append(path)
-            
-    if found_file_path_list:
-        return found_file_path_list
-    else:
-        logger.critical(f"Couldn't find 'TradeSkillMaster_AuctionDB.lua' in any of the following locations: {str([redact_account_name_from_lua_file_path(f) for f in file_path_list])}. Check if TSM is installed and if so, run a full scan first.")
-        input("Press any key to close the console")
-        sys.exit()
 
 def upload_data():
     ret = None
     logger.debug("UPLOAD SECTION")
     
-    lua_file_paths, json_file = get_lua_file_paths()
+    lua_file_paths, json_file = lua_json_helper.get_lua_file_paths()
     
     files_new = []
     files_updated = []
@@ -377,10 +44,10 @@ def upload_data():
             files_updated.append(obj)
     
     if files_new or files_updated:
-        full_file_info = get_lua_file_path_info(lua_file_paths)
+        full_file_info = lua_json_helper.get_lua_file_path_info(lua_file_paths)
         
         if files_new:
-            logger.info("Upload section - New LUA file(s) detected (probably a newly added account)")
+            logger.info("UPLOAD SECTION - New LUA file(s) detected (probably a newly added account)")
             file_info_new_files = [{"file_path": f["file_path"], "last_modified": f["last_modified"]} for f in full_file_info if f["file_path"] in files_new]
             json_file["file_info"].extend(file_info_new_files)
         
@@ -390,7 +57,7 @@ def upload_data():
             file_info_updated_files = [f for f in full_file_info if f["file_path"] in [f["file_path"] for f in files_updated]]
             json_file["file_info"].extend([{"file_path": f["file_path"], "last_modified": f["last_modified"]} for f in file_info_updated_files])
             
-        latest_data = get_latest_scans_across_all_accounts_and_realms(full_file_info)
+        latest_data = lua_json_helper.get_latest_scans_across_all_accounts_and_realms(full_file_info)
         
         updated_realms = []
         if json_file["latest_data"] != latest_data:
@@ -400,22 +67,23 @@ def upload_data():
                     
         if updated_realms:
             dev_server_regex = r"(?i)\b(?:alpha|dev|development|ptr|qa|recording)\b"
-            updated_realms_to_send = [r for r in updated_realms if not re_search(dev_server_regex, r["realm"])]
+            updated_realms_to_send = [r for r in updated_realms if not re.search(dev_server_regex, r["realm"])]
             if updated_realms_to_send:
-                logger.info(f"""Upload section - New scan timestamp found for realms: {", ".join(["'" + r["realm"] + "'" for r in updated_realms_to_send])}""")
+                logger.info("UPLOAD SECTION - New scan timestamp found for the following realms:")
+                logger.info(f"""'{"','".join(sorted([r['realm'] for r in updated_realms_to_send]))}'""")
                 for r in updated_realms_to_send:
                     r["username"] = hash_username(r["username"])
 
                 data_to_send_json_string = json.dumps(updated_realms_to_send)
                 data_to_send_bytes = io.BytesIO(data_to_send_json_string.encode('utf-8'))
                 logger.debug("Sending data")
-                import_result = send_data_to_server(data_to_send_bytes)
+                import_result = server_communication.send_data_to_server(data_to_send_bytes)
             
                 if not import_result:
-                    logger.info(f"Upload section - Upload failed. Will retry next round. ({current_tries['upload_tries']}/{HTTP_TRY_CAP})")
+                    logger.info(f"UPLOAD SECTION - Upload failed. Will retry next round. ({current_tries['upload_tries']}/{HTTP_TRY_CAP})")
                     return ret
                 
-                logger.info("Upload section - " + import_result['message'])
+                logger.info("UPLOAD SECTION - " + import_result['message'])
                 ret = import_result['update_count']
             else:
                 logger.debug("New scan timestamp found but only for Dev/PTR/QA etc servers, ignoring")
@@ -427,52 +95,32 @@ def upload_data():
                 else:
                     json_file["latest_data"].append(r)
             
-            write_json_file(json_file)
-            interruptible_sleep(15) # allow for server-side file generation
+            lua_json_helper.write_json_file(json_file)
+            generic_helper.interruptible_sleep(15) # allow for server-side file generation
         else:
-            write_json_file(json_file)
-            logger.debug("Upload section - Despite LUA file(s) being updated, there are no new scan timestamps")
+            lua_json_helper.write_json_file(json_file)
+            logger.debug("Despite LUA file(s) being updated, there are no new scan timestamps")
     else:
         logger.debug("No changes detected in LUA file(s)")
         
     return ret
 
-def is_ascension_running():
-    logger.debug("Checking if Ascension is running")
-    return 'Ascension.exe' in (p.name() for p in process_iter())
-
-def get_lua_file_paths():
-    json_file = read_json_file()
-    wtf_folder = json_file["wtf_path"]
-    lua_file_paths = get_tsm_auctiondb_lua_files(wtf_folder)
-    
-    return lua_file_paths, json_file
-
-def redact_account_name_from_lua_file_path(lua_file_path):
-    return re_sub(r"(?<=(?:\\|/)Account(?:\\|/))[^\\\/]+", "{REDACTED}", lua_file_path)
-
-def get_account_name_from_lua_file_path(lua_file_path):
-    match = re_search(r"(?<=(?:\\|/)Account(?:\\|/))[^\\\/]+", lua_file_path)
-    if match:
-        return match[0]
-    return None
-
 def download_data():
     ret = None
     logger.debug("DOWNLOAD SECTION")
-    if not is_ascension_running():
-        downloaded_data = get_data_from_server()
+    if not generic_helper.is_ascension_running():
+        downloaded_data = server_communication.get_data_from_server()
         if not downloaded_data:
             logger.debug(f"Download failed. Will retry next round. ({current_tries['download_tries']}/{HTTP_TRY_CAP})")
             return ret
-        lua_file_paths, json_file = get_lua_file_paths()
+        lua_file_paths, json_file = lua_json_helper.get_lua_file_paths()
         
         need_to_update_json = False
         need_to_update_lua_file = False
         updated_realms = set()
         for lua_file_path in lua_file_paths:
             with open(lua_file_path, "r") as outfile:
-                logger.debug(f"Processing '{redact_account_name_from_lua_file_path(lua_file_path)}'")
+                logger.debug(f"Processing '{lua_json_helper.redact_account_name_from_lua_file_path(lua_file_path)}'")
                 data = luadata_serialization.unserialize(outfile.read(), encoding="utf-8", multival=False)
                 for download_obj in downloaded_data:
                     logger.debug(f"""Processing '{download_obj["realm"]}'""")
@@ -516,9 +164,17 @@ def download_data():
                     file_obj["last_modified"] = os.path.getmtime(lua_file_path)
                     need_to_update_json = True
         
+        hashed_account_names = lua_json_helper.get_all_account_names(json_file)
         if need_to_update_json:
             ret = True
-            logger.info(f"""Download section - LUA file(s) updated with data for realms: '{", ".join(updated_realms)}'""")
+            
+            import_result = server_communication.set_download_stats({"hashed_account_names": hashed_account_names, "file_updated": True})
+            if not import_result:
+                logger.debug(f"Sending download stats failed. Will retry next round. ({current_tries['set_download_stats_tries']}/{HTTP_TRY_CAP})")
+            logger.debug(f"Download stats: {import_result['message']}")
+            
+            logger.info("DOWNLOAD SECTION - LUA file(s) updated with data for the following realms:")
+            logger.info(f"""'{"','".join(sorted(updated_realms))}'""")
             logger.debug("Json data needs to be updated")
             for download_obj in [d for d in downloaded_data if d["realm"] in updated_realms]:
                 logger.debug(f"""Checking realm '{download_obj["realm"]}'""")
@@ -529,12 +185,16 @@ def download_data():
                     realm_dict["scan_data"] = download_obj["scan_data"]
                 else:
                     logger.debug(f"""Realm '{download_obj["realm"]}' not in json data, adding it""")
-                    download_obj["username"] = get_account_name_from_lua_file_path(lua_file_paths[0])
+                    download_obj["username"] = lua_json_helper.get_account_name_from_lua_file_path(lua_file_paths[0])
                     download_obj = {k: download_obj[k] for k in ["realm", "last_complete_scan", "username", "scan_data"]}
                     json_file["latest_data"].append(download_obj)
-            write_json_file(json_file)
+            lua_json_helper.write_json_file(json_file)
             logger.debug("json data updated")
         else:
+            import_result = server_communication.set_download_stats({"hashed_account_names": hashed_account_names, "file_updated": False})
+            if not import_result:
+                logger.debug(f"Sending download stats failed. Will retry next round. ({current_tries['set_download_stats_tries']}/{HTTP_TRY_CAP})")
+            logger.debug(f"Download stats: {import_result['message']}")
             logger.debug("LUA file(s) are up-to-date for all realms")
             logger.debug("json data is up-to-date, no need to rewrite it")
     else:
@@ -542,57 +202,27 @@ def download_data():
     
     return ret
 
-def clear_message(msg):
-    sys.stdout.write('\r' + ' ' * len(msg) + '\r')
-    sys.stdout.flush()
-    
-def check_for_new_versions():
-    version_list = get_version_list()
-    if version_list:
-        newest_version = sorted(list(version_list), reverse=True)[0]
-        newer_versions = {k: v for k, v in version_list.items() if k > VERSION}
-        if newer_versions:
-            logger.debug(f"""There are several newer versions: '{", ".join(newer_versions)}'""")
-            if any([k for k, v in newer_versions.items() if v]):
-                create_update_notification(mandatory=True)
-                logger.critical("There is a MANDATORY update for this app. Please download the latest release (EXE) here: 'https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/releases'")
-                input("Press any key to close the console")
-                sys.exit()
-            else:
-                create_update_notification(mandatory=False)
-                logger.critical("There is an optional update for this app. You can download the latest release (EXE) here: 'https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/releases'")
-            logger.info(SEPARATOR)
-        else:
-            logger.debug(f"Current version {VERSION} is the most up-to-date")
-            logger.debug(SEPARATOR)
-        return newest_version
-    return None
-        
-def app_start_logging():
-    logger.info(f"{APP_NAME} started")
-    logger.info(MAIN_SEPARATOR)
-    logger.info("Make sure you have Windows notifications enabled (check GitHub FAQ).")
-    logger.info("DON'T BE A SCRUB, UPLOAD FREQUENTLY.")
-    logger.info(SEPARATOR)
 
 # %% MAIN LOOP
 
 def main():
-    global MAX_VERSION
+    global max_version
     
-    app_start_logging()
-    MAX_VERSION = check_for_new_versions()
+    generic_helper.app_start_logging()
+    max_version = server_communication.check_for_new_versions()
     
-    if not json_file_initialized():
-        initiliaze_json()
+    if not lua_json_helper.json_file_initialized():
+        lua_json_helper.initiliaze_json()
     
-    remove_old_logs()
+    check_discord_id_nickname()
+    
+    generic_helper.remove_old_logs()
     
     last_upload_time = 0
     last_download_time = 0
     last_update_check = time.time()
+    last_discord_id_nickname_check = time.time()
     
-    loading_chars = ["[   ]","[=  ]","[== ]","[===]","[ ==]","[  =]"]
     loading_char_idx = 0
     msg = ""
     old_msg = ""
@@ -601,18 +231,19 @@ def main():
         current_time = time.time()
         
         if current_time - last_upload_time >= UPLOAD_INTERVAL_SECONDS:
-            clear_message(msg)
+            generic_helper.clear_message(msg)
             ret = upload_data()
             if ret or ret == 0: # ret in this context holds the number of updated items
                 if ret:
-                    write_to_upload_stats({'time': current_time , 'version': VERSION, 'items_updated': ret})
+                    generic_helper.write_to_upload_stats({'time': current_time , 'version': VERSION, 'items_updated': ret})
                 logger.info(SEPARATOR)
             else:
                 logger.debug(SEPARATOR)
             last_upload_time = current_time
         
+        # pokud jede ascension, tak čekej, až se vypne, pak hned downloadni, pak čekej 15 min klasicky
         if current_time - last_download_time >= DOWNLOAD_INTERVAL_SECONDS:
-            clear_message(msg)
+            generic_helper.clear_message(msg)
             ret = download_data()
             if ret:
                 logger.info(SEPARATOR)
@@ -620,10 +251,15 @@ def main():
                 logger.debug(SEPARATOR)
             last_download_time = current_time
         
-        if current_time - last_update_check >= UPDATE_INTERVAL_SECONDS or MAX_VERSION == None:
-            clear_message(msg)
-            MAX_VERSION = check_for_new_versions()
-            last_update_check = current_time 
+        if current_time - last_update_check >= UPDATE_INTERVAL_SECONDS or max_version == None:
+            generic_helper.clear_message(msg)
+            max_version = server_communication.check_for_new_versions()
+            last_update_check = current_time
+            
+        if current_time - last_discord_id_nickname_check >= DISCORD_ID_NICKNAME_INTERVAL_SECONDS:
+            generic_helper.clear_message(msg)
+            check_discord_id_nickname(notification=True)
+            last_discord_id_nickname_check = current_time
             
         if UPLOAD_INTERVAL_SECONDS - (current_time - last_upload_time) > DOWNLOAD_INTERVAL_SECONDS - (current_time - last_download_time) :
             logger.debug(f"updating last_download_time from {last_download_time}")
@@ -633,33 +269,23 @@ def main():
             logger.debug(f"updating last_update_check from {last_update_check}")
             last_update_check += ((UPLOAD_INTERVAL_SECONDS - (current_time - last_upload_time)) - (UPDATE_INTERVAL_SECONDS - (current_time - last_update_check)))
             logger.debug(f"updating last_update_check to {last_update_check}")
+        if UPLOAD_INTERVAL_SECONDS - (current_time - last_upload_time) > DISCORD_ID_NICKNAME_INTERVAL_SECONDS - (current_time - last_discord_id_nickname_check):
+            logger.debug(f"updating last_discord_id_nickname_check from {last_discord_id_nickname_check}")
+            last_discord_id_nickname_check += ((UPLOAD_INTERVAL_SECONDS - (current_time - last_upload_time)) - (DISCORD_ID_NICKNAME_INTERVAL_SECONDS - (current_time - last_discord_id_nickname_check)))
+            logger.debug(f"updating last_discord_id_nickname_check to {last_discord_id_nickname_check}")
 
         old_msg = msg
-        msg = time.strftime("%Y-%m-%d %H:%M:%S,000") + " - " + loading_chars[loading_char_idx % len(loading_chars)] + " - Detecting changes (Next upload in " + str(round(max((UPLOAD_INTERVAL_SECONDS - (current_time - last_upload_time))/60, 0), 1)) + "min / Next download in " + str(round(max((DOWNLOAD_INTERVAL_SECONDS - (current_time - last_download_time)) / 60, 0), 1)) + "min)"
+        msg = time.strftime("%Y-%m-%d %H:%M:%S,000") + " - " + LOADING_CHARS[loading_char_idx % len(LOADING_CHARS)] + " - Idling (Next upload in " + str(round(max((UPLOAD_INTERVAL_SECONDS - (current_time - last_upload_time))/60, 0), 1)) + "min / Next download in " + str(round(max((DOWNLOAD_INTERVAL_SECONDS - (current_time - last_download_time)) / 60, 0), 1)) + "min)"
  
         if len(old_msg) > len(msg):
-            clear_message(old_msg)
+            generic_helper.clear_message(old_msg)
         sys.stdout.write('\r' + msg)
         sys.stdout.flush()
         loading_char_idx += 1
         time.sleep(0.5)
 
-
 if __name__ == "__main__":
-    if "logger" not in globals() and "logger" not in locals():
-        logger = get_logger()
-        
-    session = requests.Session()
-    session.mount("https://", ADAPTER)
-    session.mount("http://", ADAPTER)
-        
     try:
         main()
     except Exception:
-        if VERSION < MAX_VERSION:
-            exception_msg = "An exception occurred, likely because you're not using the most recent version of this app. Before reporting, please download the latest release (EXE) here: 'https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/releases'. If that doesn't help, send the logs to Mortificator on Discord (https://discord.gg/uTxuDvuHcn --> Addons from Szyler and co --> #tsm-data-sharing - tag @Mortificator) or create an issue on Github (https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/issues)"
-        else:
-            exception_msg = "An exception occurred. Please send the logs to Mortificator on Discord (https://discord.gg/uTxuDvuHcn --> Addons from Szyler and co --> #tsm-data-sharing - tag @Mortificator) or create an issue on Github (https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/issues)"
-        logger.critical(exception_msg)
-        logger.exception("Exception")
-        input("Press any key to close the console")
+        generic_helper.log_exception_message_and_quit(max_version)

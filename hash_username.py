@@ -1,5 +1,12 @@
-import hashlib
+# %% LOCAL IMPORTS
+
 from get_salt import get_salt
+
+# %% MODULE IMPORTS
+
+import hashlib
+
+# %% FUNCTIONS
 
 def hash_username(username):
     data_to_hash = get_salt() + username.encode('utf-8')
