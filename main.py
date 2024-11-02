@@ -15,18 +15,19 @@ import json
 import time
 import re
 import io
-import sys
 
 # %% GLOBAL VARS
 max_version = None
-from config import VERSION, UPLOAD_INTERVAL_SECONDS, HTTP_TRY_CAP, \
-    DOWNLOAD_INTERVAL_SECONDS, UPDATE_INTERVAL_SECONDS, SEPARATOR,\
-    DISCORD_ID_NICKNAME_INTERVAL_SECONDS, LOADING_CHARS
+from config import VERSION, HTTP_TRY_CAP, UPLOAD_LOOPS_PER_DOWNLOAD,\
+    UPLOAD_LOOPS_PER_UPDATE, UPLOAD_LOOPS_PER_DISCORD_ID_NICKNAME,\
+    UPLOAD_INTERVAL_SECONDS, SEPARATOR
 from server_communication import current_tries
+msg = ""
 
 # %% FUNCTIONS
 
 def upload_data():
+    global msg
     ret = None
     logger.debug("UPLOAD SECTION")
     
@@ -47,6 +48,8 @@ def upload_data():
         full_file_info = lua_json_helper.get_lua_file_path_info(lua_file_paths)
         
         if files_new:
+            generic_helper.clear_message(msg)
+            msg = ""
             logger.info("UPLOAD SECTION - New LUA file(s) detected (probably a newly added account)")
             file_info_new_files = [{"file_path": f["file_path"], "last_modified": f["last_modified"]} for f in full_file_info if f["file_path"] in files_new]
             json_file["file_info"].extend(file_info_new_files)
@@ -69,6 +72,8 @@ def upload_data():
             dev_server_regex = r"(?i)\b(?:alpha|dev|development|ptr|qa|recording)\b"
             updated_realms_to_send = [r for r in updated_realms if not re.search(dev_server_regex, r["realm"])]
             if updated_realms_to_send:
+                generic_helper.clear_message(msg)
+                msg = ""
                 logger.info("UPLOAD SECTION - New scan timestamp found for the following realms:")
                 logger.info(f"""'{"','".join(sorted([r['realm'] for r in updated_realms_to_send]))}'""")
                 for r in updated_realms_to_send:
@@ -106,6 +111,7 @@ def upload_data():
     return ret
 
 def download_data():
+    global msg
     ret = None
     logger.debug("DOWNLOAD SECTION")
     if not generic_helper.is_ascension_running():
@@ -173,6 +179,8 @@ def download_data():
                 logger.debug(f"Sending download stats failed. Will retry next round. ({current_tries['set_download_stats_tries']}/{HTTP_TRY_CAP})")
             logger.debug(f"Download stats: {import_result['message']}")
             
+            generic_helper.clear_message(msg)
+            msg = ""
             logger.info("DOWNLOAD SECTION - LUA file(s) updated with data for the following realms:")
             logger.info(f"""'{"','".join(sorted(updated_realms))}'""")
             logger.debug("Json data needs to be updated")
@@ -202,11 +210,20 @@ def download_data():
     
     return ret
 
-
 # %% MAIN LOOP
 
 def main():
     global max_version
+    
+    """
+    global msg since other functions will rewrite using sys.stdout.write
+    need to keep msg len so that it can be cleared
+    """
+    global msg
+    
+    current_upload_loop_count = 0
+    last_upload_time = 0
+    loading_char_idx = 0
     
     generic_helper.app_start_logging()
     max_version = server_communication.check_for_new_versions()
@@ -215,23 +232,26 @@ def main():
         lua_json_helper.initiliaze_json()
     
     check_discord_id_nickname()
-    
+    has_ascension_been_running = generic_helper.is_ascension_running()
     generic_helper.remove_old_logs()
     
-    last_upload_time = 0
-    last_download_time = 0
-    last_update_check = time.time()
-    last_discord_id_nickname_check = time.time()
-    
-    loading_char_idx = 0
-    msg = ""
-    old_msg = ""
+    """
+    Note to self: Spyder displays sys.stdout.write incorrectly, creating spaces
+    wehere there shouldn't be any. However, when compiled it prints fine.
+    """
     
     while True:
         current_time = time.time()
         
-        if current_time - last_upload_time >= UPLOAD_INTERVAL_SECONDS:
+        is_ascension_running_now = generic_helper.is_ascension_running()
+        if not has_ascension_been_running and is_ascension_running_now:
+            has_ascension_been_running = True
+
+        "UPLOAD"            
+        if (has_ascension_been_running and not is_ascension_running_now) or current_time - last_upload_time >= UPLOAD_INTERVAL_SECONDS:
             generic_helper.clear_message(msg)
+            msg = generic_helper.write_message("Checking upload")
+            time.sleep(0.5)
             ret = upload_data()
             if ret or ret == 0: # ret in this context holds the number of updated items
                 if ret:
@@ -240,47 +260,36 @@ def main():
             else:
                 logger.debug(SEPARATOR)
             last_upload_time = current_time
-        
-        # pokud jede ascension, tak čekej, až se vypne, pak hned downloadni, pak čekej 15 min klasicky
-        if current_time - last_download_time >= DOWNLOAD_INTERVAL_SECONDS:
-            generic_helper.clear_message(msg)
-            ret = download_data()
-            if ret:
-                logger.info(SEPARATOR)
-            else:
-                logger.debug(SEPARATOR)
-            last_download_time = current_time
-        
-        if current_time - last_update_check >= UPDATE_INTERVAL_SECONDS or max_version == None:
-            generic_helper.clear_message(msg)
-            max_version = server_communication.check_for_new_versions()
-            last_update_check = current_time
             
-        if current_time - last_discord_id_nickname_check >= DISCORD_ID_NICKNAME_INTERVAL_SECONDS:
-            generic_helper.clear_message(msg)
-            check_discord_id_nickname(notification=True)
-            last_discord_id_nickname_check = current_time
+            "DOWNLOAD"
+            if not is_ascension_running_now and (has_ascension_been_running or generic_helper.seconds_until_next_trigger(current_upload_loop_count, UPLOAD_LOOPS_PER_DOWNLOAD) == 0):
+                msg += generic_helper.write_message("Checking download", append=True if msg else False)
+                time.sleep(0.5)
+                ret = download_data()
+                if ret:
+                    logger.info(SEPARATOR)
+                else:
+                    logger.debug(SEPARATOR)
             
-        if UPLOAD_INTERVAL_SECONDS - (current_time - last_upload_time) > DOWNLOAD_INTERVAL_SECONDS - (current_time - last_download_time) :
-            logger.debug(f"updating last_download_time from {last_download_time}")
-            last_download_time += ((UPLOAD_INTERVAL_SECONDS - (current_time - last_upload_time)) - (DOWNLOAD_INTERVAL_SECONDS - (current_time - last_download_time)))
-            logger.debug(f"updating last_download_time to {last_download_time}")
-        if UPLOAD_INTERVAL_SECONDS - (current_time - last_upload_time) > UPDATE_INTERVAL_SECONDS - (current_time - last_update_check):
-            logger.debug(f"updating last_update_check from {last_update_check}")
-            last_update_check += ((UPLOAD_INTERVAL_SECONDS - (current_time - last_upload_time)) - (UPDATE_INTERVAL_SECONDS - (current_time - last_update_check)))
-            logger.debug(f"updating last_update_check to {last_update_check}")
-        if UPLOAD_INTERVAL_SECONDS - (current_time - last_upload_time) > DISCORD_ID_NICKNAME_INTERVAL_SECONDS - (current_time - last_discord_id_nickname_check):
-            logger.debug(f"updating last_discord_id_nickname_check from {last_discord_id_nickname_check}")
-            last_discord_id_nickname_check += ((UPLOAD_INTERVAL_SECONDS - (current_time - last_upload_time)) - (DISCORD_ID_NICKNAME_INTERVAL_SECONDS - (current_time - last_discord_id_nickname_check)))
-            logger.debug(f"updating last_discord_id_nickname_check to {last_discord_id_nickname_check}")
+            "UPDATE"
+            if (current_upload_loop_count != 0 and generic_helper.seconds_until_next_trigger(current_upload_loop_count, UPLOAD_LOOPS_PER_UPDATE) == 0) or max_version == None:
+                msg += generic_helper.write_message("Checking new releases", append=True if msg else False)
+                time.sleep(0.5)
+                max_version = server_communication.check_for_new_versions()
+            
+            "DISCORD ID / NICKNAME CHECK"
+            if current_upload_loop_count != 0 and generic_helper.seconds_until_next_trigger(current_upload_loop_count, UPLOAD_LOOPS_PER_DISCORD_ID_NICKNAME) == 0:
+                msg += generic_helper.write_message("Checking nickname changes", append=True if msg else False)
+                time.sleep(0.5)
+                check_discord_id_nickname(notification=True)
 
-        old_msg = msg
-        msg = time.strftime("%Y-%m-%d %H:%M:%S,000") + " - " + LOADING_CHARS[loading_char_idx % len(LOADING_CHARS)] + " - Idling (Next upload in " + str(round(max((UPLOAD_INTERVAL_SECONDS - (current_time - last_upload_time))/60, 0), 1)) + "min / Next download in " + str(round(max((DOWNLOAD_INTERVAL_SECONDS - (current_time - last_download_time)) / 60, 0), 1)) + "min)"
- 
-        if len(old_msg) > len(msg):
-            generic_helper.clear_message(old_msg)
-        sys.stdout.write('\r' + msg)
-        sys.stdout.flush()
+            if has_ascension_been_running and not is_ascension_running_now:
+                has_ascension_been_running = False
+
+            current_upload_loop_count += 1
+            
+        msg = generic_helper.write_idling_message(msg, is_ascension_running_now, loading_char_idx, current_time, last_upload_time, current_upload_loop_count)
+        
         loading_char_idx += 1
         time.sleep(0.5)
 

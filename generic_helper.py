@@ -2,7 +2,8 @@
 
 from logger_config import logger
 from config import SCRIPT_DIR, NUMBER_OF_LOGS_TO_KEEP, SEPARATOR, MAIN_SEPARATOR,\
-    APP_NAME, UPLOAD_STATS_PATH, UPLOAD_STATS_ACHIEVEMENTS
+    APP_NAME, UPLOAD_STATS_PATH, UPLOAD_STATS_ACHIEVEMENTS, UPLOAD_INTERVAL_SECONDS,\
+    LOADING_CHARS, UPLOAD_LOOPS_PER_DOWNLOAD, VERSION
 from toast_notification import create_generic_notification
 
 
@@ -33,6 +34,18 @@ def clear_message(msg):
 def get_files(dst_folder):
     return [f for f in os.listdir(dst_folder) if os.path.isfile(os.path.join(dst_folder, f))]
 
+def get_loading_msg(is_ascension_running_now, loading_char_idx, current_time, last_upload_time, current_upload_loop_count):
+    first_part = LOADING_CHARS[loading_char_idx % len(LOADING_CHARS)] +\
+                 " - Idling (Next upload in " +\
+                 str(round(max((UPLOAD_INTERVAL_SECONDS - (current_time - last_upload_time))/60, 0), 1)) + " min "
+    if not is_ascension_running_now:
+        second_part = "/ Next download in " +\
+                      str(round((seconds_until_next_trigger(current_upload_loop_count, UPLOAD_LOOPS_PER_DOWNLOAD) +\
+                      (UPLOAD_INTERVAL_SECONDS - (current_time - last_upload_time))) / 60, 1)) + " min)"
+    else:
+        second_part = "/ Next download on Ascension close)"
+    return first_part + second_part
+
 def interruptible_sleep(seconds):
     start_time = time.time()
     end_time = start_time + seconds
@@ -41,7 +54,7 @@ def interruptible_sleep(seconds):
         time.sleep(0.1)  # Sleep in smaller increments
 
 def is_ascension_running():
-    logger.debug("Checking if Ascension is running")
+    # logger.debug("Checking if Ascension is running")
     return 'Ascension.exe' in (p.name() for p in process_iter())
 
 def log_exception_message_and_quit(max_version):
@@ -75,6 +88,26 @@ def remove_old_logs():
     else:
         logger.debug("No logs to be removed")
     logger.debug(SEPARATOR)
+    
+def seconds_until_next_trigger(current_upload_loops_count, trigger_interval_loops):
+    remainder = current_upload_loops_count % trigger_interval_loops
+    if remainder == 0:
+        return 0
+    else:
+        return (trigger_interval_loops - remainder) * UPLOAD_INTERVAL_SECONDS
+
+def write_message(msg, append=False):
+    msg_to_send = f'\r{time.strftime("%Y-%m-%d %H:%M:%S,000")} - {msg}' if not append else f", {msg}"
+    sys.stdout.write(msg_to_send)
+    sys.stdout.flush()
+    return msg_to_send
+
+def write_idling_message(old_msg, is_ascension_running_now, loading_char_idx, current_time, last_upload_time, current_upload_loop_count):
+    msg = get_loading_msg(is_ascension_running_now, loading_char_idx, current_time, last_upload_time, current_upload_loop_count)
+    if len(old_msg) > len(f'\r{time.strftime("%Y-%m-%d %H:%M:%S,000")} - {msg}'):
+        clear_message(old_msg)
+    msg = write_message(msg, append=False)
+    return msg
 
 def write_to_upload_stats(upload_dict):
     if os.path.exists(UPLOAD_STATS_PATH):
