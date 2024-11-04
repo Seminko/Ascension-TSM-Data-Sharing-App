@@ -68,6 +68,16 @@ def log_exception_message_and_quit(max_version):
     
     input("Press any key to close the console")
 
+def prompt_yes_no(message):
+    while True:
+        logger.debug(f"{message} [Y/N]")
+        response = input(f"{time.strftime('%Y-%m-%d %H:%M:%S,%MS')} - {message} [Y/N]: ").lower()
+        logger.debug(f"User entered: '{response}'")
+        if response in ["y", "yes", "ye", "ya", "ys", "yea", "yeh" "yeah"]:
+            return True
+        elif response in ["n", "no", "nope", "nah", "ne", "nein"]:
+            return False
+
 def remove_old_logs():
     logger.debug("Checking for old logs to be removed")
     dst_folder = os.path.join(SCRIPT_DIR, 'logs')

@@ -1,6 +1,7 @@
 # %% LOCAL IMPORTS
 
 from logger_config import logger
+from generic_helper import prompt_yes_no
 
 # %% MODULE IMPORTS
 
@@ -9,15 +10,12 @@ import xml.etree.ElementTree as ET
 import os
 from datetime import datetime
 import re
-import time
 
 # %% FUNCTIONS
 
 def create_task_from_xml(task_name, exe_path, working_directory, xml_path):
     new_line_regex = r"(?:\n+|\s\s+)"
-    input_result = input(f"{time.strftime('%Y-%m-%d %H:%M:%S,%MS')} - Would you like to create a scheduled task so that the app runs on startup? [Y/N]: ")
-    logger.debug(f"User entered: '{input_result}'")
-    if input_result.lower() in ["y", "yes", "ye", "ya", "ys", "yea", "yeh" "yeah"]:
+    if prompt_yes_no("Would you like to create a scheduled task so that the app runs on startup?"):
         create_task_xml(task_name, exe_path, working_directory, xml_path)
         try:
             # Create the task from the XML configuration file
