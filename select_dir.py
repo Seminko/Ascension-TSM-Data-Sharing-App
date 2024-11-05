@@ -1,5 +1,9 @@
+# %% MODULE IMPORTS
+
 import asyncio
 from tkinter import Tk, filedialog
+
+# %% FUNCTIONS
 
 async def select_folder():
     loop = asyncio.get_event_loop()

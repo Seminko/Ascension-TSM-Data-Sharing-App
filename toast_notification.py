@@ -1,5 +1,33 @@
+# %% MODULE IMPORTS
+
 from winrt.windows.ui.notifications import ToastNotificationManager, ToastNotification
 import winrt.windows.data.xml.dom as dom
+
+# %% FUNCTIONS
+
+def create_generic_notification(title, desc):
+    # Create the toast notifier
+    notifier = ToastNotificationManager.create_toast_notifier('Ascension TSM Data Sharing App')
+    
+    tString = f"""
+    <toast duration='long'>
+        <audio src='ms-winsoundevent:Notification.Default' loop='false' silent='false'/>
+        <visual>
+            <binding template='ToastText02'>
+                <text id='1'>{title}</text>
+                <text id='2'>{desc}</text>
+            </binding>
+        </visual>
+    </toast>
+    
+    """
+    
+    # Load the XML content into the notification
+    xDoc = dom.XmlDocument()
+    xDoc.load_xml(tString)
+    
+    # Show the toast notification
+    notifier.show(ToastNotification(xDoc))
 
 def create_update_notification(mandatory=False):
     # Create the toast notifier
@@ -66,27 +94,3 @@ def create_update_notification(mandatory=False):
     
 #     # Show the toast notification
 #     notifier.show(ToastNotification(xDoc))
-    
-def create_generic_notification(title, desc):
-    # Create the toast notifier
-    notifier = ToastNotificationManager.create_toast_notifier('Ascension TSM Data Sharing App')
-    
-    tString = f"""
-    <toast duration='long'>
-        <audio src='ms-winsoundevent:Notification.Default' loop='false' silent='false'/>
-        <visual>
-            <binding template='ToastText02'>
-                <text id='1'>{title}</text>
-                <text id='2'>{desc}</text>
-            </binding>
-        </visual>
-    </toast>
-    
-    """
-    
-    # Load the XML content into the notification
-    xDoc = dom.XmlDocument()
-    xDoc.load_xml(tString)
-    
-    # Show the toast notification
-    notifier.show(ToastNotification(xDoc))

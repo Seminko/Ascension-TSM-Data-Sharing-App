@@ -1,11 +1,54 @@
+# %% LOCAL IMPORTS
+
+from logger_config import logger
+from generic_helper import prompt_yes_no
+
+# %% MODULE IMPORTS
+
 import subprocess
 import xml.etree.ElementTree as ET
-from os import remove
+import os
 from datetime import datetime
 import re
-from time import strftime as time_strftime
 
-def create_task_xml(task_name, exe_path, working_directory, xml_path, logger):
+# %% FUNCTIONS
+
+def create_task_from_xml(task_name, exe_path, working_directory, xml_path):
+    new_line_regex = r"(?:\n+|\s\s+)"
+    if prompt_yes_no("Would you like to create a scheduled task so that the app runs on startup?"):
+        create_task_xml(task_name, exe_path, working_directory, xml_path)
+        try:
+            # Create the task from the XML configuration file
+            result = subprocess.run([
+                'schtasks', '/create',
+                '/tn', task_name,      # Task name
+                '/xml', xml_path,      # Path to the XML file
+                '/f'                   # Force creation (overwrite if exists)
+            ], capture_output=True, text=True, check=True)
+            # "stdout is not actually always english :("
+            # if not "successfully been created" in result.stdout:
+            #     raise Exception(re.sub(new_line_regex, " ", result.stdout).strip())
+            logger.info(f"Scheduled task '{task_name}' created successfully")
+        except subprocess.CalledProcessError as e:
+            logger.critical(f"""Failed to create startup task. Error: '{re.sub(new_line_regex, " ", e.stderr).strip()}'""")
+            logger.exception("Handled exception")
+        except Exception as e:
+            logger.critical(f"Failed to create startup task. Error: '{str(repr(e))}'")
+            logger.exception("Handled exception")
+        finally:
+            try:
+                os.remove(xml_path)
+                logger.debug(f"Task definition XML '{xml_path}' removed successfully")
+            except PermissionError as e:
+                logger.debug(f"Removing task definition XML '{xml_path}' failed due to: '{str(repr(e))}'")
+            except FileNotFoundError:
+                logger.debug(f"Removing task definition XML '{xml_path}' failed due to: 'FileNotFoundError'")
+                pass
+    else:
+        logger.debug("Trying to delete the task (in case it already exists and the setup was re-triggered)")
+        delete_task(task_name)
+
+def create_task_xml(task_name, exe_path, working_directory, xml_path):
     # Root element
     task = ET.Element('Task', attrib={
         'version': '1.3', 
@@ -71,7 +114,7 @@ def create_task_xml(task_name, exe_path, working_directory, xml_path, logger):
 
     logger.debug(f"Task definition XML file '{xml_path}' created successfully.")
     
-def delete_task(task_name, logger):
+def delete_task(task_name):
     new_line_regex = r"(?:\n+|\s\s+)"
     try:
         # Delete the task from Task Scheduler
@@ -80,54 +123,11 @@ def delete_task(task_name, logger):
             '/tn', task_name,
             '/f'  # Force deletion without confirmation
         ], capture_output=True, text=True, check=True)
-        if not "successfully deleted" in result.stdout:
-            raise Exception(result.stdout)
+        # "stdout is not actually always english :("
+        # if not "successfully deleted" in result.stdout:
+        #     raise Exception(result.stdout)
         logger.debug(f"Scheduled task '{task_name}' deleted successfully.")
     except subprocess.CalledProcessError as e:
         logger.debug(f"""Failed to delete startup task - probably because it doesn't exist / has never existed. Error: '{re.sub(new_line_regex, " ", e.stderr).strip()}'""")
     except Exception as e:
         logger.debug(f"Failed to delete startup task. Error: '{str(repr(e))}'")
-        
-# def ask_for_input(prompt, logger):
-#     logger.debug("Asking whether to create a scheduled startup task")
-#     logger.info(prompt)
-#     user_input = input()
-#     logger.debug(f"User entered: '{user_input}'")
-#     return user_input
-
-def create_task_from_xml(task_name, exe_path, working_directory, xml_path, logger):
-    new_line_regex = r"(?:\n+|\s\s+)"
-    input_result = input(f"{time_strftime('%Y-%m-%d %H:%M:%S,%MS')} - Would you like to create a scheduled task so that the app runs on startup? [Y/N]: ")
-    logger.debug(f"User entered: '{input_result}'")
-    if input_result.lower() in ["y", "yes", "ye", "ya", "ys", "yea", "yeh" "yeah"]:
-        create_task_xml(task_name, exe_path, working_directory, xml_path, logger)
-        try:
-            # Create the task from the XML configuration file
-            result = subprocess.run([
-                'schtasks', '/create',
-                '/tn', task_name,      # Task name
-                '/xml', xml_path,      # Path to the XML file
-                '/f'                   # Force creation (overwrite if exists)
-            ], capture_output=True, text=True, check=True)
-            if not "successfully been created" in result.stdout:
-                raise Exception(re.sub(new_line_regex, " ", result.stdout).strip())
-            logger.info(f"Scheduled task '{task_name}' created successfully")
-        except subprocess.CalledProcessError as e:
-            logger.critical(f"""Failed to create startup task. Error: '{re.sub(new_line_regex, " ", e.stderr).strip()}'""")
-            logger.exception("Handled exception")
-        except Exception as e:
-            logger.critical(f"Failed to create startup task. Error: '{str(repr(e))}'")
-            logger.exception("Handled exception")
-        finally:
-            try:
-                remove(xml_path)
-                logger.debug(f"Task definition XML '{xml_path}' removed successfully")
-            except PermissionError as e:
-                logger.debug(f"Removing task definition XML '{xml_path}' failed due to: '{str(repr(e))}'")
-            except FileNotFoundError:
-                logger.debug(f"Removing task definition XML '{xml_path}' failed due to: 'FileNotFoundError'")
-                pass
-    else:
-        logger.debug("Trying to delete the task (in case it already exists and the setup was re-triggered)")
-        delete_task(task_name, logger)
-    
