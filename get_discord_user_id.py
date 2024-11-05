@@ -181,10 +181,7 @@ def prompt_for_discord_id():
         discord_id = input(f"{time.strftime('%Y-%m-%d %H:%M:%S,%MS')} - Paste your Discord User ID here: ")
         logger.debug(f"User entered: '{discord_id}'")
         if validate_discord_user_id(discord_id):
-            logger.debug("Paste your Discord User ID again: ")
-            if input(f"{time.strftime('%Y-%m-%d %H:%M:%S,%MS')} - Paste your Discord User ID again: ") == discord_id:
-                return discord_id
-            logger.critical("Discord User IDs did not match.")
+            return discord_id
         else:
             logger.info("Invalid Discord User ID. Please try again.")
 
@@ -195,10 +192,7 @@ def prompt_for_nickname():
         nickname = input(f"{time.strftime('%Y-%m-%d %H:%M:%S,%MS')} - Enter your nickname here: ")
         logger.debug(f"User entered: '{nickname}'")
         if validate_nickname(nickname):
-            logger.debug("Enter your nickname again: ")
-            if input(f"{time.strftime('%Y-%m-%d %H:%M:%S,%MS')} - Enter your nickname again: ") == nickname:
-                return nickname
-            logger.critical("Nicknames did not match.")
+            return nickname
         else:
             logger.info("Invalid nickname. Please try again.")
 
