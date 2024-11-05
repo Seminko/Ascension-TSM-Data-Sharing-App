@@ -132,5 +132,13 @@ If an Antivirus blocks the file, put whitelist the folder you saved the EXE to, 
 
 &nbsp;
 
+- Q: How do I get my Discord User ID?
+- A: First you need to enable developer mode (as per screenshots below - User Settings - Advanced - Developer Mode), then you right click on your name / avatar and click "Copy User ID".<br>
+![discord_user_settings](https://github.com/user-attachments/assets/3411b1bc-dac7-4165-b4f1-3da530b2092b)
+![discord_developer_mode](https://github.com/user-attachments/assets/61cfca4b-ceb6-482d-8e30-cdade377741e)
+![discord_copy_user_id](https://github.com/user-attachments/assets/f3f1d500-9f76-4747-bcb0-59130284f69c)
+
+&nbsp;
+
 - Q: Will this support Linux?
 - A: Not sure. I'm losing interested in Ascension atm. If there's enough demand, I'll consider it.
