@@ -104,7 +104,7 @@ def get_tsm_auctiondb_lua_files(wtf_folder):
         return found_file_path_list
     else:
         logger.critical(f"Couldn't find 'TradeSkillMaster_AuctionDB.lua' in any of the following locations: {str([redact_account_name_from_lua_file_path(f) for f in file_path_list])}. Check if TSM is installed and if so, run a full scan first.")
-        input("Press any key to close the console")
+        input("Press Enter to close the console")
         sys.exit()
 
 def initiliaze_json():
