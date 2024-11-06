@@ -148,11 +148,11 @@ def get_user_id_initial(unhashed_account_names, ):
 
 def get_user_id_input():
     discord_id = None
+    logger.info("Discord User ID is a 18-19 digit number (unique identifier). To get it, you have to enable")
+    logger.info("Developer mode in the discord app (just three clicks, I swear!), then right click")
+    logger.info("your name and select Copy User ID. If you're not sure how to enable Developer mode,")
+    logger.info("check Github readme (https://github.com/Seminko/Ascension-TSM-Data-Sharing-App).")
     if prompt_yes_no("Would you like to input your Discord User ID?"):
-        logger.info("Discord User ID is a 18-19 digit number (unique identifier). To get it, you have to enable")
-        logger.info("Developer mode in the discord app (just three clicks, I swear!), then right click")
-        logger.info("your name and select Copy User ID. If you're not sure how to enable Developer mode,")
-        logger.info("check Github readme (https://github.com/Seminko/Ascension-TSM-Data-Sharing-App).")
         discord_id = prompt_for_discord_id()
     if discord_id:
         logger.info("Since you gave your Discord ID, it would be great if the nickname matched")
