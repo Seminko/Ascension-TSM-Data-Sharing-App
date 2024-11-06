@@ -2,13 +2,12 @@
 
 import sys
 import os
-import time
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 # %% FUNCTIONS
 
-VERSION = "1.2"
+VERSION = "1.2.1"
 
 if getattr(sys, 'frozen', False):
     # Running in PyInstaller executable
