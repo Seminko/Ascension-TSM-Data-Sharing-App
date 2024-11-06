@@ -76,7 +76,7 @@ def check_discord_id_nickname(notification=False):
             logger.info(f"""These accounts were added since last time they got checked: '{"','".join(newly_added_accounts)}'.""")
         logger.info("Let's set them up.")
         discord_id_nickname_dict = set_up_specific_accounts(accounts_failed_validation+newly_added_accounts, discord_id_nickname_dict)
-        discord_id_nickname_full_process(json_file, discord_id_nickname_dict)
+    discord_id_nickname_full_process(json_file, discord_id_nickname_dict)        
     
 def change_discord_id_nickname_psa():
     logger.info("---")
