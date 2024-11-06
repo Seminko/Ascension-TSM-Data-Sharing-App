@@ -28,7 +28,7 @@ def check_for_new_versions():
             if any([k for k, v in newer_versions.items() if v]):
                 create_update_notification(mandatory=True)
                 logger.critical("There is a MANDATORY update for this app. Please download the latest release (EXE) here: 'https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/releases'")
-                input("Press any key to close the console")
+                input("Press Enter to close the console")
                 sys.exit()
             else:
                 create_update_notification(mandatory=False)

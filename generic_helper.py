@@ -66,7 +66,7 @@ def log_exception_message_and_quit(max_version):
     logger.critical(exception_msg)
     logger.exception("Exception")
     
-    input("Press any key to close the console")
+    input("Press Enter to close the console")
 
 def prompt_yes_no(message):
     while True:
