@@ -58,7 +58,7 @@ def is_ascension_running():
     return 'Ascension.exe' in (p.name() for p in process_iter())
 
 def log_exception_message_and_quit(max_version):
-    if VERSION < max_version:
+    if max_version and VERSION < max_version:
         exception_msg = "An exception occurred, likely because you're not using the most recent version of this app. Before reporting, please download the latest release (EXE) here: 'https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/releases'. If that doesn't help, send the logs to Mortificator on Discord (https://discord.gg/uTxuDvuHcn --> Addons from Szyler and co --> #tsm-data-sharing - tag @Mortificator) or create an issue on Github (https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/issues)"
     else:
         exception_msg = "An exception occurred. Please send the logs to Mortificator on Discord (https://discord.gg/uTxuDvuHcn --> Addons from Szyler and co --> #tsm-data-sharing - tag @Mortificator) or create an issue on Github (https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/issues)"
