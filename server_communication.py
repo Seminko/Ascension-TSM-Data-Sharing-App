@@ -47,8 +47,8 @@ def generate_chunks(file_object, chunk_size=1024):
             break
         yield chunk
 
-def get_data_from_server():
-    return make_http_request("get_data_from_server")
+def get_data_from_server(latest_scans_per_realm):
+    return make_http_request("get_data_from_server", latest_scans_per_realm)
 
 def get_version_list():
     return make_http_request("check_version")
@@ -65,7 +65,7 @@ def make_http_request(purpose, data_to_send=None):
         fail_debug_log = "Downloading from DB failed"
         current_tries_key = "download_tries"
         url = get_endpoints.get_download_endpoint()
-        request_eval_str = f"session.get('{url}', timeout={REQUEST_TIMEOUT})"
+        request_eval_str = f"session.post('{url}', json=data_to_send, timeout={REQUEST_TIMEOUT})"
     elif purpose == "check_version":
         init_debug_log = "Checking what is the most up-to-date version"
         fail_debug_log = "Check most up-to-date version failed"

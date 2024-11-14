@@ -83,6 +83,10 @@ def get_latest_scans_across_all_accounts_and_realms(file_info):
         latest_data.append(obj)
     return latest_data
 
+def get_latest_scans_per_realm_from_json_file():
+    json_file = read_json_file()
+    return {dct["realm"]: dct["last_complete_scan"] for dct in json_file["latest_data"]}
+
 def get_tsm_auctiondb_lua_files(wtf_folder):
     logger.debug("Getting all lua files for all accounts")
     "Gets 'TradeSkillMaster_AuctionDB.lua' file paths for all accounts"

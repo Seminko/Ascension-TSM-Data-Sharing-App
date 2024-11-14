@@ -66,7 +66,8 @@ def upload_data():
         updated_realms = []
         if json_file["latest_data"] != latest_data:
             for la in latest_data:
-                if la["last_complete_scan"] > next((r["last_complete_scan"] for r in json_file["latest_data"] if r["realm"] == la["realm"]), 0):
+                "+1 used to counteract -1 as per below"
+                if la["last_complete_scan"] > (next((r["last_complete_scan"] for r in json_file["latest_data"] if r["realm"] == la["realm"]), 0)+1):
                     updated_realms.append(la)
                     
         if updated_realms:
@@ -94,11 +95,20 @@ def upload_data():
             else:
                 logger.debug("New scan timestamp found but only for Dev/PTR/QA etc servers, ignoring")
             
+            """"
+            -1 used to redownload anyways
+            what can happen is that your data is a year old and you scan
+            a single item, the lastCompleteScan will still show now() time and
+            since the lastCompleteScan is new, it won't download anything from server
+            this will ensure that a redownload happens (only if the uploaded
+            changes are processed server-side), potentially updating other items as well locally
+            """
             for r in updated_realms:
                 json_file_obj = next((l for l in json_file["latest_data"] if l["realm"] == r["realm"]), None)
                 if json_file_obj:
-                    json_file_obj["last_complete_scan"] = r["last_complete_scan"]
+                    json_file_obj["last_complete_scan"] = r["last_complete_scan"] - 1
                 else:
+                    r["last_complete_scan"] -= 1
                     json_file["latest_data"].append(r)
             
             lua_json_helper.write_json_file(json_file)
@@ -116,100 +126,102 @@ def download_data(full_file_info):
     ret = None
     logger.debug("DOWNLOAD SECTION")
     if not generic_helper.is_ascension_running():
-        downloaded_data = server_communication.get_data_from_server()
-        if not downloaded_data:
+        latest_scans_per_realm = lua_json_helper.get_latest_scans_per_realm_from_json_file()
+        logger.debug(f"Latest local scan times: {latest_scans_per_realm}")
+        downloaded_data = server_communication.get_data_from_server(latest_scans_per_realm)
+        if downloaded_data is None:
             logger.debug(f"Download failed. Will retry next round. ({current_tries['download_tries']}/{HTTP_TRY_CAP})")
             return ret
-        lua_file_paths, json_file = lua_json_helper.get_lua_file_paths()
+        if len(downloaded_data) == 0:
+            logger.debug("LUA file(s) are up-to-date for all realms")
+            return ret
         
-        need_to_update_json = False
-        need_to_update_lua_file = False
-        updated_realms = set()
-        for lua_file_path in lua_file_paths:
-            with open(lua_file_path, "r") as outfile:
-                logger.debug(f"Processing '{lua_json_helper.redact_account_name_from_lua_file_path(lua_file_path)}'")
-                data = luadata_serialization.unserialize(outfile.read(), encoding="utf-8", multival=False)
-                for download_obj in downloaded_data:
-                    logger.debug(f"""Processing '{download_obj["realm"]}'""")
-                    if "realm" in data:
-                        if not data["realm"] and isinstance(data["realm"], list):
-                            logger.debug("data['realm'] is empty list")
-                            data["realm"] = {}
-                            
-                        if download_obj["realm"] in data["realm"]:
-                            if data["realm"][download_obj["realm"]]["lastCompleteScan"] < download_obj["last_complete_scan"]:
-                                logger.debug(f"""'{download_obj["realm"]}' in data['realm'], updating it""")
-                                data["realm"][download_obj["realm"]]["lastCompleteScan"] = download_obj["last_complete_scan"]
-                                data["realm"][download_obj["realm"]]["scanData"] = download_obj["scan_data"]
-                                need_to_update_lua_file = True
-                                updated_realms.add(download_obj["realm"])
-                            else:
-                                logger.debug(f"""'{download_obj["realm"]}' data is up-to-date, no need to rewrite it""")
-                                continue
-                        else:
-                            logger.debug(f"""'{download_obj["realm"]}' not in data['realm'], adding it""")
-                            data["realm"][download_obj["realm"]] = {}
-                            data["realm"][download_obj["realm"]]["lastCompleteScan"] = download_obj["last_complete_scan"]
-                            data["realm"][download_obj["realm"]]["lastScanSecondsPerPage"] = 0.5
-                            data["realm"][download_obj["realm"]]["scanData"] = download_obj["scan_data"]
-                            need_to_update_lua_file = True
-                            updated_realms.add(download_obj["realm"])
-                    else:
-                        logger.debug(f"""'realm' key not in data, adding it and setting up realm '{download_obj["realm"]}'""")
-                        data["realm"] = {}
-                        data["realm"][download_obj["realm"]] = {}
-                        data["realm"][download_obj["realm"]]["lastCompleteScan"] = download_obj["last_complete_scan"]
-                        data["realm"][download_obj["realm"]]["lastScanSecondsPerPage"] = 0.5
-                        data["realm"][download_obj["realm"]]["scanData"] = download_obj["scan_data"]
-                        need_to_update_lua_file = True
-                        updated_realms.add(download_obj["realm"])
-                
-                if need_to_update_lua_file:
-                    prefix = """-- Updated by Ascension TSM Data Sharing App (https://github.com/Seminko/Ascension-TSM-Data-Sharing-App)\nAscensionTSM_AuctionDB = """
-                    luadata_serialization.write(lua_file_path, data, encoding="utf-8", indent="\t", prefix=prefix)
-                    file_obj = next(f for f in json_file["file_info"] if f["file_path"] == lua_file_path)
-                    file_obj["last_modified"] = os.path.getmtime(lua_file_path)
-                    need_to_update_json = True
+        ret = True
+        logger.debug(f"""Downloaded newer data for the following realms: '{"','".join([realm["realm"] for realm in downloaded_data])}'""")
+        json_file = lua_json_helper.read_json_file()
+        
+        "When a realm is not downloaded, process it still so that it propages to other accounts (only if the last scan has been within the last 7 days)"
+        realms_not_downloaded = [realm for realm in json_file["latest_data"] if realm["realm"] not in [realm["realm"] for realm in downloaded_data] and realm["last_complete_scan"] >= (time.time() - 604800)]
+        logger.debug(f"""Adding the following realms from local previous scans so to potentially propagate to other accounts: '{"','".join([realm["realm"] for realm in realms_not_downloaded])}'""")
+        json_file, lua_file_paths, full_file_info = update_lua_files(full_file_info, downloaded_data+realms_not_downloaded)
         
         hashed_account_names = lua_json_helper.get_all_account_names(json_file)
-        if need_to_update_json:
-            ret = True
-            
-            import_result = server_communication.set_download_stats({"hashed_account_names": hashed_account_names, "file_updated": True})
-            if not import_result:
-                logger.debug(f"Sending download stats failed. Will retry next round. ({current_tries['set_download_stats_tries']}/{HTTP_TRY_CAP})")
-            logger.debug(f"Download stats: {import_result['message']}")
-            
-            generic_helper.clear_message(msg)
-            msg = ""
-            logger.info("DOWNLOAD SECTION - LUA file(s) updated with data for the following realms:")
-            logger.info(f"""'{"','".join(sorted(updated_realms))}'""")
-            logger.debug("Json data needs to be updated")
-            for download_obj in [d for d in downloaded_data if d["realm"] in updated_realms]:
-                logger.debug(f"""Checking realm '{download_obj["realm"]}'""")
-                realm_dict = next((realm for realm in json_file["latest_data"] if realm["realm"] == download_obj["realm"]), None)
-                if realm_dict:
-                    logger.debug(f"""Realm '{download_obj["realm"]}' in json data, updating it""")
-                    realm_dict["last_complete_scan"] = download_obj["last_complete_scan"]
-                    realm_dict["scan_data"] = download_obj["scan_data"]
-                else:
-                    logger.debug(f"""Realm '{download_obj["realm"]}' not in json data, adding it""")
-                    download_obj["username"] = lua_json_helper.get_account_name_from_lua_file_path(lua_file_paths[0])
-                    download_obj = {k: download_obj[k] for k in ["realm", "last_complete_scan", "username", "scan_data"]}
-                    json_file["latest_data"].append(download_obj)
-            lua_json_helper.write_json_file(json_file)
-            logger.debug("json data updated")
-        else:
-            import_result = server_communication.set_download_stats({"hashed_account_names": hashed_account_names, "file_updated": False})
-            if not import_result:
-                logger.debug(f"Sending download stats failed. Will retry next round. ({current_tries['set_download_stats_tries']}/{HTTP_TRY_CAP})")
-            logger.debug(f"Download stats: {import_result['message']}")
-            logger.debug("LUA file(s) are up-to-date for all realms")
-            logger.debug("json data is up-to-date, no need to rewrite it")
+        
+        import_result = server_communication.set_download_stats({"hashed_account_names": hashed_account_names, "file_updated": True})
+        if not import_result:
+            logger.debug(f"Sending download stats failed. Will retry next round. ({current_tries['set_download_stats_tries']}/{HTTP_TRY_CAP})")
+        logger.debug(f"Download stats: {import_result['message']}")
+        
+        msg = generic_helper.clear_message(msg)
+        logger.info("DOWNLOAD SECTION - LUA file(s) updated with data for the following realms:")
+        logger.info(f"""'{"','".join([realm["realm"] for realm in downloaded_data])}'""")
+        logger.debug("Json data needs to be updated")
+        for download_obj in downloaded_data:
+            logger.debug(f"""Checking realm '{download_obj["realm"]}'""")
+            realm_dict = next((realm for realm in json_file["latest_data"] if realm["realm"] == download_obj["realm"]), None)
+            if realm_dict:
+                logger.debug(f"""Realm '{download_obj["realm"]}' in json data, updating it""")
+                realm_dict["last_complete_scan"] = download_obj["last_complete_scan"]
+                realm_dict["scan_data"] = download_obj["scan_data"]
+            else:
+                logger.debug(f"""Realm '{download_obj["realm"]}' not in json data, adding it""")
+                download_obj["username"] = lua_json_helper.get_account_name_from_lua_file_path(lua_file_paths[0])
+                download_obj = {k: download_obj[k] for k in ["realm", "last_complete_scan", "username", "scan_data"]}
+                json_file["latest_data"].append(download_obj)
+        lua_json_helper.write_json_file(json_file)
+        logger.debug("json data updated")
     else:
         logger.debug("Ascension is running, skipping download")
     
     return ret
+
+def update_lua_files(full_file_info, downloaded_data):
+    lua_file_paths, json_file = lua_json_helper.get_lua_file_paths()
+    if not full_file_info:
+        full_file_info = lua_json_helper.get_lua_file_path_info(lua_file_paths)
+    for lua_file_path in lua_file_paths:
+        need_to_update_lua_file = False
+        data = next(f["full_data"] for f in full_file_info if f["file_path"] == lua_file_path)
+        logger.debug(f"Processing '{lua_json_helper.redact_account_name_from_lua_file_path(lua_file_path)}'")
+        for download_obj in downloaded_data:
+            logger.debug(f"""Processing '{download_obj["realm"]}'""")
+            if "realm" in data:
+                if not data["realm"] and isinstance(data["realm"], list):
+                    logger.debug("data['realm'] is empty list")
+                    data["realm"] = {}
+                    
+                if download_obj["realm"] in data["realm"]:
+                    if data["realm"][download_obj["realm"]]["lastCompleteScan"] <= download_obj["last_complete_scan"]:
+                        logger.debug(f"""'{download_obj["realm"]}' in data['realm'], updating it""")
+                        data["realm"][download_obj["realm"]]["lastCompleteScan"] = download_obj["last_complete_scan"]
+                        data["realm"][download_obj["realm"]]["scanData"] = download_obj["scan_data"]
+                        need_to_update_lua_file = True
+                    else:
+                        logger.debug(f"""'{download_obj["realm"]}' data is up-to-date, no need to rewrite it""")
+                        continue
+                else:
+                    logger.debug(f"""'{download_obj["realm"]}' not in data['realm'], adding it""")
+                    data["realm"][download_obj["realm"]] = {}
+                    data["realm"][download_obj["realm"]]["lastCompleteScan"] = download_obj["last_complete_scan"]
+                    data["realm"][download_obj["realm"]]["lastScanSecondsPerPage"] = 0.5
+                    data["realm"][download_obj["realm"]]["scanData"] = download_obj["scan_data"]
+                    need_to_update_lua_file = True
+            else:
+                logger.debug(f"""'realm' key not in data, adding it and setting up realm '{download_obj["realm"]}'""")
+                data["realm"] = {}
+                data["realm"][download_obj["realm"]] = {}
+                data["realm"][download_obj["realm"]]["lastCompleteScan"] = download_obj["last_complete_scan"]
+                data["realm"][download_obj["realm"]]["lastScanSecondsPerPage"] = 0.5
+                data["realm"][download_obj["realm"]]["scanData"] = download_obj["scan_data"]
+                need_to_update_lua_file = True
+        
+        if need_to_update_lua_file:
+            prefix = """-- Updated by Ascension TSM Data Sharing App (https://github.com/Seminko/Ascension-TSM-Data-Sharing-App)\nAscensionTSM_AuctionDB = """
+            luadata_serialization.write(lua_file_path, data, encoding="utf-8", indent="\t", prefix=prefix)
+            file_obj = next(f for f in json_file["file_info"] if f["file_path"] == lua_file_path)
+            file_obj["last_modified"] = os.path.getmtime(lua_file_path)
+
+    return json_file, lua_file_paths, full_file_info
 
 # %% MAIN LOOP
 
