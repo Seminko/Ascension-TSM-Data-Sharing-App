@@ -15,6 +15,7 @@ import json
 import time
 import re
 import io
+import copy
 
 # %% GLOBAL VARS
 max_version = None
@@ -73,6 +74,7 @@ def upload_data():
         if updated_realms:
             dev_server_regex = r"(?i)\b(?:alpha|dev|development|ptr|qa|recording)\b"
             updated_realms_to_send = [r for r in updated_realms if not re.search(dev_server_regex, r["realm"])]
+            updated_realms_to_send = [copy.deepcopy(r) for r in updated_realms if not re.search(dev_server_regex, r["realm"])]
             if updated_realms_to_send:
                 generic_helper.clear_message(msg)
                 msg = ""
