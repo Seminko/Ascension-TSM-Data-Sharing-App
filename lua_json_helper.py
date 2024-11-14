@@ -43,7 +43,7 @@ def get_last_complete_scan(lua_file_path):
                 obj["last_complete_scan"] = data["realm"][realm]["lastCompleteScan"]
                 obj["scan_data"] = data["realm"][realm]["scanData"]
                 realm_list.append(obj)
-        return realm_list
+        return realm_list, data
 
 def get_lua_file_path_info(lua_file_paths):
     file_updated_list = []
@@ -52,7 +52,7 @@ def get_lua_file_path_info(lua_file_paths):
         obj = {}
         obj["file_path"] = lua_file_path
         obj["last_modified"] = os.path.getmtime(lua_file_path)
-        obj["realm_last_complete_scan"] = get_last_complete_scan(lua_file_path)
+        obj["realm_last_complete_scan"], obj["full_data"] = get_last_complete_scan(lua_file_path)
         file_updated_list.append(obj)
     return file_updated_list
 

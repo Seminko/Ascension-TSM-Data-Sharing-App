@@ -29,6 +29,7 @@ msg = ""
 def upload_data():
     global msg
     ret = None
+    full_file_info = None
     logger.debug("UPLOAD SECTION")
     
     lua_file_paths, json_file = lua_json_helper.get_lua_file_paths()
@@ -86,7 +87,7 @@ def upload_data():
             
                 if not import_result:
                     logger.info(f"UPLOAD SECTION - Upload failed. Will retry next round. ({current_tries['upload_tries']}/{HTTP_TRY_CAP})")
-                    return ret
+                    return ret, full_file_info
                 
                 logger.info("UPLOAD SECTION - " + import_result['message'])
                 ret = import_result['update_count']
@@ -108,9 +109,9 @@ def upload_data():
     else:
         logger.debug("No changes detected in LUA file(s)")
         
-    return ret
+    return ret, full_file_info
 
-def download_data():
+def download_data(full_file_info):
     global msg
     ret = None
     logger.debug("DOWNLOAD SECTION")
@@ -252,7 +253,7 @@ def main():
             generic_helper.clear_message(msg)
             msg = generic_helper.write_message("Checking upload")
             time.sleep(0.5)
-            ret = upload_data()
+            ret, full_file_info = upload_data()
             if ret or ret == 0: # ret in this context holds the number of updated items
                 if ret:
                     generic_helper.write_to_upload_stats({'time': current_time , 'version': VERSION, 'items_updated': ret})
@@ -265,7 +266,7 @@ def main():
             if not is_ascension_running_now and (has_ascension_been_running or generic_helper.seconds_until_next_trigger(current_upload_loop_count, UPLOAD_LOOPS_PER_DOWNLOAD) == 0):
                 msg += generic_helper.write_message("Checking download", append=True if msg else False)
                 time.sleep(0.5)
-                ret = download_data()
+                ret = download_data(full_file_info)
                 if ret:
                     logger.info(SEPARATOR)
                 else:
