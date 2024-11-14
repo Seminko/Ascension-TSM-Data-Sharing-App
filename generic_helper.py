@@ -30,6 +30,12 @@ def app_start_logging():
 def clear_message(msg):
     sys.stdout.write('\r' + ' ' * len(msg) + '\r')
     sys.stdout.flush()
+    return ""
+
+def clear_message_and_write_new(old_msg, msg):
+    clear_message(old_msg)
+    msg = write_message(msg, append=False)
+    return msg
 
 def get_files(dst_folder):
     return [f for f in os.listdir(dst_folder) if os.path.isfile(os.path.join(dst_folder, f))]
