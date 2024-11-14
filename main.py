@@ -71,8 +71,7 @@ def upload_data():
                     updated_realms.append(la)
                     
         if updated_realms:
-            dev_server_regex = r"(?i)\b(?:alpha|dev|development|ptr|qa|recording)\b"
-            updated_realms_to_send = [r for r in updated_realms if not re.search(dev_server_regex, r["realm"])]
+            dev_server_regex = r"(?i)\b(?:alpha|dev(?:elopment)?|ptr|qa|recording)\b"
             updated_realms_to_send = [copy.deepcopy(r) for r in updated_realms if not re.search(dev_server_regex, r["realm"])]
             if updated_realms_to_send:
                 msg = generic_helper.clear_message(msg)
