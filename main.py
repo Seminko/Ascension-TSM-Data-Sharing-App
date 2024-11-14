@@ -50,8 +50,7 @@ def upload_data():
         full_file_info = lua_json_helper.get_lua_file_path_info(lua_file_paths)
         
         if files_new:
-            generic_helper.clear_message(msg)
-            msg = ""
+            msg = generic_helper.clear_message(msg)
             logger.info("UPLOAD SECTION - New LUA file(s) detected (probably a newly added account)")
             file_info_new_files = [{"file_path": f["file_path"], "last_modified": f["last_modified"]} for f in full_file_info if f["file_path"] in files_new]
             json_file["file_info"].extend(file_info_new_files)
@@ -76,8 +75,7 @@ def upload_data():
             updated_realms_to_send = [r for r in updated_realms if not re.search(dev_server_regex, r["realm"])]
             updated_realms_to_send = [copy.deepcopy(r) for r in updated_realms if not re.search(dev_server_regex, r["realm"])]
             if updated_realms_to_send:
-                generic_helper.clear_message(msg)
-                msg = ""
+                msg = generic_helper.clear_message(msg)
                 logger.info("UPLOAD SECTION - New scan timestamp found for the following realms:")
                 logger.info(f"""'{"','".join(sorted([r['realm'] for r in updated_realms_to_send]))}'""")
                 for r in updated_realms_to_send:
@@ -264,8 +262,7 @@ def main():
 
         "UPLOAD"            
         if (has_ascension_been_running and not is_ascension_running_now) or current_time - last_upload_time >= UPLOAD_INTERVAL_SECONDS:
-            generic_helper.clear_message(msg)
-            msg = generic_helper.write_message("Checking upload")
+            msg = generic_helper.clear_message_and_write_new(msg, "Checking upload")
             time.sleep(0.5)
             ret, full_file_info = upload_data()
             if ret or ret == 0: # ret in this context holds the number of updated items
