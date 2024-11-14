@@ -309,4 +309,5 @@ if __name__ == "__main__":
     try:
         main()
     except Exception:
+        generic_helper.clear_message(msg)
         generic_helper.log_exception_message_and_quit(max_version)
