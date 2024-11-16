@@ -56,6 +56,9 @@ APP_NAME = f"Ascension TSM Data Sharing App v{VERSION}"
 MAIN_SEPARATOR = "==========================================================================================="
 SEPARATOR = "-------------------------------------------------------------------------------------------"
 
+GITHUB_REPO_URL = "https://github.com/Seminko/Ascension-TSM-Data-Sharing-App"
+DISCORD_INVITE_LINK = "https://discord.gg/uTxuDvuHcn"
+
 UPLOAD_STATS_ACHIEVEMENTS = {
     3: "ACHIEVEMENT UNLOCKED! Your third upload! Steady pace, I like it!",
     10: "ACHIEVEMENT UNLOCKED! Ten uploads! Heck yea!",

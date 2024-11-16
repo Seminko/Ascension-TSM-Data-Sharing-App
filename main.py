@@ -7,6 +7,7 @@ import server_communication
 import luadata_serialization
 from hash_username import hash_username
 import generic_helper
+from config import GITHUB_REPO_URL
 
 # %% MODULE IMPORTS
 
@@ -215,7 +216,7 @@ def update_lua_files(full_file_info, downloaded_data):
                 need_to_update_lua_file = True
         
         if need_to_update_lua_file:
-            prefix = """-- Updated by Ascension TSM Data Sharing App (https://github.com/Seminko/Ascension-TSM-Data-Sharing-App)\nAscensionTSM_AuctionDB = """
+            prefix = f"""-- Updated by Ascension TSM Data Sharing App ({GITHUB_REPO_URL})\nAscensionTSM_AuctionDB = """
             luadata_serialization.write(lua_file_path, data, encoding="utf-8", indent="\t", prefix=prefix)
             file_obj = next(f for f in json_file["file_info"] if f["file_path"] == lua_file_path)
             file_obj["last_modified"] = os.path.getmtime(lua_file_path)

@@ -1,6 +1,6 @@
 # %% LOCAL IMPORTS
 
-from config import NICKNAME_FILE_NAME_PATH, SEPARATOR
+from config import NICKNAME_FILE_NAME_PATH, SEPARATOR, GITHUB_REPO_URL
 from logger_config import logger
 import lua_json_helper
 from hash_username import hash_username
@@ -151,7 +151,7 @@ def get_user_id_input():
     logger.info("Discord User ID is a 18-19 digit number (unique identifier). To get it, you have to enable")
     logger.info("Developer mode in the discord app (cogwheel-advanced-developer mode), then right click")
     logger.info("your name and select Copy User ID. If you're not sure how to enable Developer mode,")
-    logger.info("check Github readme (https://github.com/Seminko/Ascension-TSM-Data-Sharing-App).")
+    logger.info(f"check Github readme ({GITHUB_REPO_URL}).")
     if prompt_yes_no("Would you like to input your Discord User ID?"):
         discord_id = prompt_for_discord_id()
     if discord_id:

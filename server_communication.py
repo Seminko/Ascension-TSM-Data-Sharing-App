@@ -1,7 +1,8 @@
 # %% LOCAL IMPORTS
 
 import get_endpoints
-from config import REQUEST_TIMEOUT, HTTP_TRY_CAP, VERSION, SEPARATOR, ADAPTER
+from config import REQUEST_TIMEOUT, HTTP_TRY_CAP, VERSION, SEPARATOR, ADAPTER,\
+    UPDATE_INTERVAL_SECONDS, GITHUB_REPO_URL
 from logger_config import logger
 from toast_notification import create_update_notification # this needs to be before get_wft_folder (if I remember correctly)
 
