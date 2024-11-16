@@ -89,7 +89,7 @@ def discord_id_nickname_full_process(json_file, discord_id_nickname_dict=None):
         discord_id_nickname_dict = get_user_id_initial(unhased_account_names)
     "Some might add discord user id as int, which makes sense, so I don't want to bother them with revalidation."
     "The values are being converted to string during validation and finally set as strings before saving the values."
-    discord_id_nickname_dict = {k: {key: str(val) if val is not None else None for key, val in v.items()} for k, v in discord_id_nickname_dict.items()}
+    discord_id_nickname_dict = {k: {key: str(val) if val is not None and val != "" else None for key, val in v.items()} for k, v in discord_id_nickname_dict.items()}
     set_discord_id_nickname_to_file(discord_id_nickname_dict)
     set_discord_id_nickname_to_main_json_file(json_file, discord_id_nickname_dict)
     discord_id_nickname_send_to_server(discord_id_nickname_dict)
@@ -216,6 +216,9 @@ def validate_both_values(discord_user_id, nickname):
     return validate_discord_user_id(discord_user_id) and validate_nickname(nickname)
 
 def validate_discord_user_id(discord_user_id):
+    if discord_user_id == "":
+        logger.debug("Discord User ID is empty string. Changing it to None")
+        discord_user_id = None
     if discord_user_id is None:
         logger.debug("Discord User ID validated")
         return True
