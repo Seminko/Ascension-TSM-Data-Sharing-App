@@ -1,6 +1,6 @@
 # %% LOCAL IMPORTS
 
-from config import APP_NAME
+from config import APP_NAME_WITHOUT_VERSION
 
 # %% MODULE IMPORTS
 
@@ -11,7 +11,7 @@ import winrt.windows.data.xml.dom as dom
 
 def create_generic_notification(title, desc, urgent=False):
     # Create the toast notifier
-    notifier = ToastNotificationManager.create_toast_notifier(APP_NAME)
+    notifier = ToastNotificationManager.create_toast_notifier(APP_NAME_WITHOUT_VERSION)
     scenario = ""
     ms_winsoundevent = "Notification.Default"
     if urgent:
@@ -40,7 +40,7 @@ def create_generic_notification(title, desc, urgent=False):
 
 def create_update_notification(mandatory=False):
     # Create the toast notifier
-    notifier = ToastNotificationManager.create_toast_notifier(APP_NAME)
+    notifier = ToastNotificationManager.create_toast_notifier(APP_NAME_WITHOUT_VERSION)
     
     # Define the title, description, and URL
     if mandatory:
