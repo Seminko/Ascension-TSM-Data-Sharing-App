@@ -134,6 +134,14 @@ def write_idling_message(old_msg, is_ascension_running_now, loading_char_idx, cu
     msg = write_message(msg, append=False)
     return msg
 
+def write_to_json(json_path, json_dict):
+    with open(json_path, "w") as outfile:
+        outfile.write(json.dumps(json_dict, indent=4))
+        
+def read_from_json(json_path):
+    with open(json_path, "r") as file:
+        return file
+
 def write_to_upload_stats(upload_dict):
     if os.path.exists(UPLOAD_STATS_PATH):
         with open(UPLOAD_STATS_PATH, "r") as outfile:
@@ -154,9 +162,8 @@ def write_to_upload_stats(upload_dict):
                     upload_stats_json["individual_uploads"].append(upload_dict)
                 else:
                     upload_stats_json["individual_uploads"] = [upload_dict]
-                    
-                with open(UPLOAD_STATS_PATH, "w") as outfile:
-                    outfile.write(json.dumps(upload_stats_json, indent=4))
+                
+                write_to_json(UPLOAD_STATS_PATH, upload_stats_json)
                     
                 if upload_stats_json["total_upload_count"] in UPLOAD_STATS_ACHIEVEMENTS:
                     create_generic_notification("ACHIEVEMENT UNLOCKED!", f"{UPLOAD_STATS_ACHIEVEMENTS[upload_stats_json['total_upload_count']].replace('ACHIEVEMENT UNLOCKED!', '')}&#10;So far you helped update {upload_stats_json['total_items_updated']:,} items.")
@@ -176,8 +183,7 @@ def write_to_upload_stats(upload_dict):
     upload_stats_json["total_items_updated"] = upload_dict["items_updated"]
     upload_stats_json["individual_uploads"] = [upload_dict]
     
-    with open(UPLOAD_STATS_PATH, "w") as outfile:
-        outfile.write(json.dumps(upload_stats_json, indent=4))
+    write_to_json(UPLOAD_STATS_PATH, upload_stats_json)
         
     create_generic_notification("ACHIEVEMENT UNLOCKED!", f"Your first upload! Keep it up! Proud of you!&#10;So far you helped update {upload_stats_json['total_items_updated']:,} items.")
     logger.info(SEPARATOR)

@@ -6,7 +6,7 @@ import lua_json_helper
 from hash_username import hash_username
 from server_communication import set_user
 from toast_notification import create_generic_notification
-from generic_helper import prompt_yes_no
+from generic_helper import prompt_yes_no, write_to_json
 
 # %% MODULE IMPORTS
 
@@ -90,7 +90,7 @@ def discord_id_nickname_full_process(json_file, discord_id_nickname_dict=None):
     "Some might add discord user id as int, which makes sense, so I don't want to bother them with revalidation."
     "The values are being converted to string during validation and finally set as strings before saving the values."
     discord_id_nickname_dict = {k: {key: str(val) if val is not None and val != "" else None for key, val in v.items()} for k, v in discord_id_nickname_dict.items()}
-    set_discord_id_nickname_to_file(discord_id_nickname_dict)
+    write_to_json(NICKNAME_FILE_NAME_PATH, discord_id_nickname_dict)
     set_discord_id_nickname_to_main_json_file(json_file, discord_id_nickname_dict)
     discord_id_nickname_send_to_server(discord_id_nickname_dict)
     logger.info(SEPARATOR)
@@ -195,10 +195,6 @@ def prompt_for_nickname():
             return nickname
         else:
             logger.info("Invalid nickname. Please try again.")
-
-def set_discord_id_nickname_to_file(discord_id_nickname_dict):
-    with open(NICKNAME_FILE_NAME_PATH, "w") as outfile:
-        outfile.write(json.dumps(discord_id_nickname_dict, indent=4))
     
 def set_discord_id_nickname_to_main_json_file(json_file, discord_id_nickname_dict):
     json_file["username_last_modified"] = os.path.getmtime(NICKNAME_FILE_NAME_PATH)

@@ -5,6 +5,7 @@ import luadata_serialization
 from get_wtf_folder import get_wtf_folder
 from hash_username import hash_username
 from task_scheduler import create_task_from_xml
+from generic_helper import write_to_json
 from config import SCRIPT_DIR, SEPARATOR, JSON_FILE_NAME,\
     EXE_PATH, XML_TASK_DEFINITION_PATH, JSON_PATH, APP_NAME_WITHOUT_VERSION
 
@@ -148,6 +149,4 @@ def redact_account_name_from_lua_file_path(lua_file_path):
 
 def write_json_file(json_object):
     logger.debug("Saving json file")
-    with open(JSON_PATH, "w") as outfile:
-        json_string = json.dumps(json_object, indent=4)
-        outfile.write(json_string)
+    write_to_json(JSON_PATH, json_object)
