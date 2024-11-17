@@ -14,7 +14,7 @@ import os
 import sys
 import time
 import json
-from psutil import process_iter
+from psutil import process_iter, NoSuchProcess, ZombieProcess
 
 # %% FUNCTIONS
 
@@ -62,7 +62,15 @@ def interruptible_sleep(seconds):
 
 def is_ascension_running():
     # logger.debug("Checking if Ascension is running")
-    return 'Ascension.exe' in (p.name() for p in process_iter())
+    for p in process_iter(['name']):
+        try:
+            return any(
+                p.info['name'] == 'acrotray.exe' 
+                for p in process_iter(['name'])
+            )
+        except (NoSuchProcess, ZombieProcess):
+            pass
+    return False
 
 def log_exception_message_and_quit(max_version):
     if max_version and VERSION < max_version:
