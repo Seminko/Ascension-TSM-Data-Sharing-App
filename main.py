@@ -8,6 +8,7 @@ import luadata_serialization
 from hash_username import hash_username
 import generic_helper
 from config import GITHUB_REPO_URL, APP_NAME
+from toast_notification import create_generic_notification
 
 # %% MODULE IMPORTS
 
@@ -309,5 +310,6 @@ if __name__ == "__main__":
     try:
         main()
     except Exception:
+        create_generic_notification("Exception!", f"An exception occured. Report it pls!", urgent=True)
         generic_helper.clear_message(msg)
         generic_helper.log_exception_message_and_quit(max_version)
