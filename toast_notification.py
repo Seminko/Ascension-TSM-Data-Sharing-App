@@ -1,3 +1,7 @@
+# %% LOCAL IMPORTS
+
+from config import APP_NAME
+
 # %% MODULE IMPORTS
 
 from winrt.windows.ui.notifications import ToastNotificationManager, ToastNotification
@@ -31,7 +35,7 @@ def create_generic_notification(title, desc):
 
 def create_update_notification(mandatory=False):
     # Create the toast notifier
-    notifier = ToastNotificationManager.create_toast_notifier('Ascension TSM Data Sharing App')
+    notifier = ToastNotificationManager.create_toast_notifier(APP_NAME)
     
     # Define the title, description, and URL
     if mandatory:

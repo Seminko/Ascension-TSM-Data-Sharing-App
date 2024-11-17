@@ -2,6 +2,7 @@
 
 from logger_config import logger
 from generic_helper import prompt_yes_no
+from config import APP_NAME_WITHOUT_VERSION
 
 # %% MODULE IMPORTS
 
@@ -62,7 +63,7 @@ def create_task_xml(task_name, exe_path, working_directory, xml_path):
     author = ET.SubElement(registration_info, 'Author')
     author.text = 'Mortificator'
     description = ET.SubElement(registration_info, 'Description')
-    description.text = 'Will run Ascension TSM Data Sharing App on user login'
+    description.text = f'Will run {APP_NAME_WITHOUT_VERSION} on user login'
 
     # Triggers element
     triggers = ET.SubElement(task, 'Triggers')

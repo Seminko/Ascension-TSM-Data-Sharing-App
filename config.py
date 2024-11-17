@@ -52,7 +52,8 @@ ADAPTER = HTTPAdapter(max_retries=RETRY_STRATEGY)
 
 NUMBER_OF_LOGS_TO_KEEP = 50
 
-APP_NAME = f"Ascension TSM Data Sharing App v{VERSION}"
+APP_NAME_WITHOUT_VERSION = "Ascension TSM Data Sharing App"
+APP_NAME = f"{APP_NAME_WITHOUT_VERSION} v{VERSION}"
 MAIN_SEPARATOR = "==========================================================================================="
 SEPARATOR = "-------------------------------------------------------------------------------------------"
 

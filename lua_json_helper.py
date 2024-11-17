@@ -6,7 +6,7 @@ from get_wtf_folder import get_wtf_folder
 from hash_username import hash_username
 from task_scheduler import create_task_from_xml
 from config import SCRIPT_DIR, SEPARATOR, JSON_FILE_NAME,\
-    EXE_PATH, XML_TASK_DEFINITION_PATH, JSON_PATH
+    EXE_PATH, XML_TASK_DEFINITION_PATH, JSON_PATH, APP_NAME_WITHOUT_VERSION
 
 # %% MODULE IMPORTS
 
@@ -115,7 +115,7 @@ def initiliaze_json():
     logger.info("It seems this is the first time using the app, here's what's going to happen:")
     logger.info("First you will be asked whether you want to create a startup task. This will make sure")
     logger.info("the app runs automatically when you turn on your PC and starts downloading latest data.")
-    create_task_from_xml(task_name="TSM Data Sharing App", exe_path=EXE_PATH, working_directory=SCRIPT_DIR, xml_path=XML_TASK_DEFINITION_PATH)
+    create_task_from_xml(task_name=APP_NAME_WITHOUT_VERSION, exe_path=EXE_PATH, working_directory=SCRIPT_DIR, xml_path=XML_TASK_DEFINITION_PATH)
     logger.info(SEPARATOR)
     logger.info(f"Initializing '{JSON_FILE_NAME}'")
     logger.info("Now the app will look for your WTF folder. If you installed Ascension in the default")
