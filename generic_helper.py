@@ -65,7 +65,7 @@ def is_ascension_running():
     for p in process_iter(['name']):
         try:
             return any(
-                p.info['name'] == 'acrotray.exe' 
+                p.info['name'].lower() == 'ascension.exe' 
                 for p in process_iter(['name'])
             )
         except (NoSuchProcess, ZombieProcess):
