@@ -74,9 +74,9 @@ def is_ascension_running():
 
 def log_exception_message_and_quit(max_version):
     if max_version and VERSION < max_version:
-        exception_msg = f"An exception occurred, likely because you're not using the most recent version of this app. Before reporting, please download the latest release (EXE) here: '{GITHUB_REPO_URL}/releases'. If that doesn't help, send the logs to Mortificator on Discord ({DISCORD_INVITE_LINK} --> Addons from Szyler and co --> #tsm-data-sharing - tag @Mortificator) or create an issue on Github ({GITHUB_REPO_URL}/issues)"
+        exception_msg = f"An exception occurred, likely because you're not using the most recent version of this app. Before reporting, please download the latest release (EXE) here: '{GITHUB_REPO_URL}/releases'. If that doesn't help, send the logs to Mortificator on Discord ({DISCORD_INVITE_LINK} --> Other DEVs Addons (N-Z) --> #tsm-data-sharing - tag @Mortificator) or create an issue on Github ({GITHUB_REPO_URL}/issues)"
     else:
-        exception_msg = f"An exception occurred. Please send the logs to Mortificator on Discord ({DISCORD_INVITE_LINK} --> Addons from Szyler and co --> #tsm-data-sharing - tag @Mortificator) or create an issue on Github ({GITHUB_REPO_URL}/issues)"
+        exception_msg = f"An exception occurred. Please send the logs to Mortificator on Discord ({DISCORD_INVITE_LINK} --> Other DEVs Addons (N-Z) --> #tsm-data-sharing - tag @Mortificator) or create an issue on Github ({GITHUB_REPO_URL}/issues)"
     
     logger.critical(exception_msg)
     logger.exception("Exception")
