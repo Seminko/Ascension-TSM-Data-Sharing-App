@@ -9,6 +9,7 @@ from hash_username import hash_username
 import generic_helper
 from config import GITHUB_REPO_URL, APP_NAME
 from toast_notification import create_generic_notification
+from task_scheduler import re_set_startup_task
 
 # %% MODULE IMPORTS
 
@@ -250,10 +251,15 @@ def main():
     generic_helper.remove_old_logs()
     
     """
+    Deleting old task, since the name has changed from 'TSM Data Sharing App'
+    to the app name 'Ascension TSM Data Sharing App'
+    """
+    re_set_startup_task()
+    
+    """
     Note to self: Spyder displays sys.stdout.write incorrectly, creating spaces
     wehere there shouldn't be any. However, when compiled it prints fine.
     """
-    
     while True:
         current_time = time.time()
         

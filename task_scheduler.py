@@ -2,7 +2,7 @@
 
 from logger_config import logger
 from generic_helper import prompt_yes_no
-from config import APP_NAME_WITHOUT_VERSION
+from config import APP_NAME_WITHOUT_VERSION, EXE_PATH, SCRIPT_DIR, XML_TASK_DEFINITION_PATH
 
 # %% MODULE IMPORTS
 
@@ -128,7 +128,15 @@ def delete_task(task_name):
         # if not "successfully deleted" in result.stdout:
         #     raise Exception(result.stdout)
         logger.debug(f"Scheduled task '{task_name}' deleted successfully.")
+        return True
     except subprocess.CalledProcessError as e:
         logger.debug(f"""Failed to delete startup task - probably because it doesn't exist / has never existed. Error: '{re.sub(new_line_regex, " ", e.stderr).strip()}'""")
+        return False
     except Exception as e:
         logger.debug(f"Failed to delete startup task. Error: '{str(repr(e))}'")
+        return None
+
+def re_set_startup_task():
+    delete_task_success = delete_task("TSM Data Sharing App")
+    if delete_task_success:
+        create_task_from_xml(task_name=APP_NAME_WITHOUT_VERSION, exe_path=EXE_PATH, working_directory=SCRIPT_DIR, xml_path=XML_TASK_DEFINITION_PATH)
