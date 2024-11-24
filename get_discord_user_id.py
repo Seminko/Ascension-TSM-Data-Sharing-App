@@ -80,8 +80,8 @@ def check_discord_id_nickname(notification=False):
     
 def change_discord_id_nickname_psa():
     logger.info("---")
-    logger.info("If you ever want to change your Discord User ID and / or nickname,")
-    logger.info("you can update it in 'discord_id_username.json'.")
+    logger.info("If you ever want to change your Discord User ID and / or nickname, you can update it")
+    logger.info("in 'discord_id_username.json'. To remove discord user id, replace the number with null.")
 
 def discord_id_nickname_full_process(json_file, discord_id_nickname_dict=None):
     if discord_id_nickname_dict is None:
