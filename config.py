@@ -18,6 +18,8 @@ else:
     SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
     EXE_PATH = os.path.abspath(__file__)
     
+UPDATER_PATH = os.path.join(SCRIPT_DIR, "updatificator.exe")
+    
 XML_TASK_DEFINITION_PATH = os.path.join(SCRIPT_DIR, "startup_task_definition.xml")
     
 JSON_FILE_NAME = "update_times.json"
@@ -25,6 +27,9 @@ JSON_PATH = os.path.join(SCRIPT_DIR, JSON_FILE_NAME)
 
 UPLOAD_STATS_FILE_NAME = "upload_stats.json"
 UPLOAD_STATS_PATH = os.path.join(SCRIPT_DIR, UPLOAD_STATS_FILE_NAME)
+
+UPDATE_PREFERENCES_FILE_NAME = 'update_preferences.json'
+UPDATE_PREFERENCES_PATH = os.path.join(SCRIPT_DIR, UPDATE_PREFERENCES_FILE_NAME)
 
 NICKNAME_FILE_NAME = "discord_id_username.json"
 NICKNAME_FILE_NAME_PATH = os.path.join(SCRIPT_DIR, NICKNAME_FILE_NAME)

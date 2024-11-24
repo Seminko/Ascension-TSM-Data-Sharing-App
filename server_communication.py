@@ -5,12 +5,14 @@ from config import REQUEST_TIMEOUT, HTTP_TRY_CAP, VERSION, SEPARATOR, ADAPTER,\
     UPDATE_INTERVAL_SECONDS, GITHUB_REPO_URL
 from logger_config import logger
 from toast_notification import create_update_notification # this needs to be before get_wft_folder (if I remember correctly)
+from generic_helper import prompt_yes_no, run_updater, get_update_preferences
 
 # %% MODULE IMPORTS
 
 import re
 import requests
 import sys
+import time
 
 # %% FUNCTIONS
 
@@ -20,20 +22,36 @@ session.mount("https://", ADAPTER)
 session.mount("http://", ADAPTER)
 
 def check_for_new_versions():
+    update_automatically_without_prompting = get_update_preferences()
     version_list = get_version_list()
     if version_list:
         newest_version = sorted(list(version_list), reverse=True)[0]
         newer_versions = {k: v for k, v in version_list.items() if k > VERSION}
         if newer_versions:
             logger.debug(f"""There are several newer versions: '{", ".join(newer_versions)}'""")
+            if update_automatically_without_prompting:
+                run_updater()
+                sys.exit()
             if any([k for k, v in newer_versions.items() if v]):
                 create_update_notification(mandatory=True)
-                logger.critical("There is a MANDATORY update for this app. Please download the latest release (EXE) here: 'https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/releases'")
-                input("Press Enter to close the console")
+                logger.critical("There is a MANDATORY update for this app. WILL NOT run until you update!")
+                logger.info("A new window will appear, this app will be killed and re-run after update automatically.")
+                logger.info("In case the udpate fails, you can always download the latest version from the repo:")
+                logger.info(f"{GITHUB_REPO_URL}/releases")
+                input(f"{time.strftime('%Y-%m-%d %H:%M:%S,%MS')} - Press Enter to update the app.")
+                run_updater()
                 sys.exit()
             else:
                 create_update_notification(mandatory=False)
-                logger.critical("There is an optional update for this app. You can download the latest release (EXE) here: 'https://github.com/Seminko/Ascension-TSM-Data-Sharing-App/releases'")
+                logger.critical("There is an optional update for this app. Despite it being optional, please update.")
+                logger.info("A new window will appear, this app will be killed and re-run after update automatically.")
+                logger.info("In case the udpate fails, you can always download the latest version from the repo:")
+                logger.info(f"{GITHUB_REPO_URL}/releases")
+                if prompt_yes_no("Would you like to update?"):
+                    run_updater()
+                    sys.exit()
+                else:
+                    logger.info(f"Skipping update until you restart the app. Will remind you in {UPDATE_INTERVAL_SECONDS/60/60} hours otherwise.")
             logger.info(SEPARATOR)
         else:
             logger.debug(f"Current version {VERSION} is the most up-to-date")

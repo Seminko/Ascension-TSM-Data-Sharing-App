@@ -3,8 +3,8 @@
 from logger_config import logger
 from config import SCRIPT_DIR, NUMBER_OF_LOGS_TO_KEEP, SEPARATOR, MAIN_SEPARATOR,\
     APP_NAME, UPLOAD_STATS_PATH, UPLOAD_STATS_ACHIEVEMENTS, UPLOAD_INTERVAL_SECONDS,\
-    LOADING_CHARS, UPLOAD_LOOPS_PER_DOWNLOAD, VERSION
-    GITHUB_REPO_URL, DISCORD_INVITE_LINK
+    LOADING_CHARS, UPLOAD_LOOPS_PER_DOWNLOAD, VERSION, UPDATER_PATH, EXE_PATH,\
+    GITHUB_REPO_URL, DISCORD_INVITE_LINK, UPDATE_PREFERENCES_PATH, UPDATE_PREFERENCES_FILE_NAME
 from toast_notification import create_generic_notification
 
 
@@ -15,6 +15,7 @@ import sys
 import time
 import json
 from psutil import process_iter, NoSuchProcess, ZombieProcess
+import subprocess
 
 # %% FUNCTIONS
 
@@ -28,6 +29,16 @@ def app_start_logging():
     logger.info("DON'T BE A SCRUB, UPLOAD FREQUENTLY.")
     logger.info(SEPARATOR)
 
+def update_preferences_string_to_bool(update_preferences):
+    changed = False
+    if update_preferences["update_automatically_without_prompting"] in ["True", "true", "y", "yes"]:
+        update_preferences["update_automatically_without_prompting"] = True
+        changed = True
+    elif update_preferences["update_automatically_without_prompting"] in ["False", "false", "n", "no"]:
+        update_preferences["update_automatically_without_prompting"] = False
+        changed = True
+    return changed, update_preferences
+    
 def clear_message(msg):
     sys.stdout.write('\r' + ' ' * len(msg) + '\r')
     sys.stdout.flush()
@@ -92,6 +103,40 @@ def prompt_yes_no(message):
             return True
         elif response in ["n", "no", "nope", "nah", "ne", "nein"]:
             return False
+        
+def get_update_preferences():
+    update_preferences = None
+    file_initialized_previously = os.path.exists(UPDATE_PREFERENCES_PATH)
+    if not file_initialized_previously:
+        logger.info("Auto-Updater has been implemented. These updates can either happen automatically")
+        logger.info("(completely without your input) or only when you acknowledge the update prompt.")
+        if prompt_yes_no("Would you like for the updates to happen automatically without prompting?"):
+            update_preferences = {"update_automatically_without_prompting": True}
+        else:
+            update_preferences = {"update_automatically_without_prompting": False}
+        write_to_json(UPDATE_PREFERENCES_PATH, update_preferences)
+        logger.info(f"If you ever change your mind, delete '{UPDATE_PREFERENCES_FILE_NAME}' and it will trigger")
+        logger.info("this setup again. Or, if you're brave, open the file and change the value to true / false.")
+    
+    if update_preferences is None:
+        update_preferences_str = read_from_json(UPDATE_PREFERENCES_PATH)
+        update_preferences = json.loads(update_preferences_str)
+    
+    logger.debug(f'update_automatically_without_prompting: {update_preferences["update_automatically_without_prompting"]}')
+    if isinstance(update_preferences["update_automatically_without_prompting"], bool):
+        if not file_initialized_previously:
+            logger.info(SEPARATOR)
+        return update_preferences["update_automatically_without_prompting"]
+    elif isinstance(update_preferences["update_automatically_without_prompting"], str):
+        changed, update_preferences = update_preferences_string_to_bool(update_preferences)
+        if changed:
+            write_to_json(UPDATE_PREFERENCES_PATH, update_preferences)
+            if not file_initialized_previously:
+                logger.info(SEPARATOR)
+            return update_preferences["update_automatically_without_prompting"]
+        logger.critical(f"It seems you changed '{UPDATE_PREFERENCES_FILE_NAME}'. The only allowed values are true / false.")
+    
+    raise ValueError('update_preferences["update_automatically_without_prompting"] is not a bool!')
 
 def remove_old_logs():
     logger.debug("Checking for old logs to be removed")
@@ -113,6 +158,10 @@ def remove_old_logs():
     else:
         logger.debug("No logs to be removed")
     logger.debug(SEPARATOR)
+    
+def run_updater():
+    logger.debug("Running updater")
+    subprocess.Popen([UPDATER_PATH, str(os.getpid()), EXE_PATH], creationflags=subprocess.CREATE_NEW_CONSOLE)
     
 def seconds_until_next_trigger(current_upload_loops_count, trigger_interval_loops):
     remainder = current_upload_loops_count % trigger_interval_loops
@@ -140,7 +189,7 @@ def write_to_json(json_path, json_dict):
         
 def read_from_json(json_path):
     with open(json_path, "r") as file:
-        return file
+        return file.read()
 
 def write_to_upload_stats(upload_dict):
     if os.path.exists(UPLOAD_STATS_PATH):
