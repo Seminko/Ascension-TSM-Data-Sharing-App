@@ -2,7 +2,7 @@
 
 [Trade Skill Master](https://tradeskillmaster.com/) data sharing application for [Ascension WoW's](https://ascension.gg/) [TSM Addon](https://github.com/Ascension-Addons/TradeSkillMaster).
 
-You can get a hold of me on [SzylerAddons Discord](https://discord.gg/uTxuDvuHcn) (Addons from Szyler and co --> #tsm-data-sharing) - @the_real_mortificator.
+You can get a hold of me on [SzylerAddons Discord](https://discord.gg/uTxuDvuHcn) (Other DEVs Addons (N-Z) --> #tsm-data-sharing) - @the_real_mortificator.
 
 Thanks to [Szyler](https://github.com/Szyler) and [MummieSenpai](https://github.com/MummieSenpai) for testing.
 
@@ -128,7 +128,7 @@ If an Antivirus blocks the file, put whitelist the folder you saved the EXE to, 
 &nbsp;
 
 - Q: The app crashed on me / apparently doesn't work as intended. What should I do?
-- A: Definitely report it. Create an issue here, if you have a github account, or alternatively you can try [SzylerAddons Discord](https://discord.gg/uTxuDvuHcn) --> Addons from Szyler and co --> #tsm-data-sharing. Either way, describe the issue in detail and include logs. For questions head to Discord.
+- A: Definitely report it. Create an issue here, if you have a github account, or alternatively you can try [SzylerAddons Discord](https://discord.gg/uTxuDvuHcn) --> Other DEVs Addons (N-Z) --> #tsm-data-sharing. Either way, describe the issue in detail and include logs. For questions head to Discord.
 
 &nbsp;
 
@@ -138,6 +138,28 @@ If an Antivirus blocks the file, put whitelist the folder you saved the EXE to, 
 ![discord_developer_mode](https://github.com/user-attachments/assets/61cfca4b-ceb6-482d-8e30-cdade377741e)
 ![discord_copy_user_id](https://github.com/user-attachments/assets/f3f1d500-9f76-4747-bcb0-59130284f69c)
 
+&nbsp;
+
+- Q: I gave my Discord User ID but the tags annoy me. How do i remove it?
+- A: Open up discord_id_username.json and put null as your discord_user_id, eg:
+```
+FROM:
+{
+    "YOUR_ACCOUNT_NAME": {
+        "discord_user_id": "123456789012345678",
+        "nickname": "your_nick"
+    }
+}
+
+TO:
+{
+    "YOUR_ACCOUNT_NAME": {
+        "discord_user_id": null,
+        "nickname": "your_nick"
+    }
+}
+```
+ 
 &nbsp;
 
 - Q: Will this support Linux?
