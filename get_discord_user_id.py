@@ -6,7 +6,7 @@ import lua_json_helper
 from hash_username import hash_username
 from server_communication import set_user
 from toast_notification import create_generic_notification
-from generic_helper import prompt_yes_no, write_to_json
+from generic_helper import prompt_yes_no, write_to_json, clear_message
 
 # %% MODULE IMPORTS
 
@@ -17,52 +17,55 @@ import os
 
 # %% FUNCTIONS
 
-def check_discord_id_nickname(notification=False):
+def check_discord_id_nickname(notification=False, console_msg=""):
     logger.debug("Checking Discord User ID")
     json_file = lua_json_helper.read_json_file()
     if not os.path.exists(NICKNAME_FILE_NAME_PATH):
         logger.debug("Username not set up yet")
         discord_id_nickname_full_process(json_file)
-        return
+        return console_msg
     else:
         logger.debug("Username set up already")
         if json_file.get("username_last_modified") != os.path.getmtime(NICKNAME_FILE_NAME_PATH):
             logger.debug("Discord User ID / Nickname file modified")
             discord_id_nickname_str = get_discord_id_nickname_from_file()
             if not discord_id_nickname_str:
+                console_msg = clear_message(console_msg)
                 logger.info("Discord User ID / Nickname file is empty. Please set it up again")
                 discord_id_nickname_full_process(json_file)
-                return
+                return console_msg
             else:
                 discord_id_nickname_dict = parse_discord_id_nickname_str_to_dict(discord_id_nickname_str)
                 if discord_id_nickname_dict is None:
+                    console_msg = clear_message(console_msg)
                     logger.info("Discord User ID / Nickname file cannot be parsed. Please set it up again")
                     discord_id_nickname_full_process(json_file)
-                    return
+                    return console_msg
                     
                 if json_file.get("username_last_value") == discord_id_nickname_dict and is_account_list_unchanged(json_file):
                     logger.debug("Despite the file being modified content didn't change and no new accounts added")
                     set_discord_id_nickname_to_main_json_file(json_file, discord_id_nickname_dict)
-                    return
+                    return console_msg
         elif is_account_list_unchanged(json_file):
             logger.debug("Discord User ID / Nickname file remains unchanged")
-            return
+            return console_msg
         else:
             logger.debug("Account list changed")
             discord_id_nickname_str = get_discord_id_nickname_from_file()
             discord_id_nickname_dict = parse_discord_id_nickname_str_to_dict(discord_id_nickname_str)
             
             if discord_id_nickname_dict is None:
+                console_msg = clear_message(console_msg)
                 logger.info("Discord User ID / Nickname file cannot be parsed. Please set it up again")
                 discord_id_nickname_full_process(json_file)
-                return
+                return console_msg
                 
             if json_file.get("username_last_value") == discord_id_nickname_dict and is_account_list_unchanged(json_file):
                 logger.debug("Despite the file being modified content didn't change and no new accounts added")
                 set_discord_id_nickname_to_main_json_file(json_file, discord_id_nickname_dict)
-                return
+                return console_msg
     
-    
+    console_msg = clear_message(console_msg)
     if json_file.get("username_last_value") != discord_id_nickname_dict:
         logger.info("Discord User ID / Nickname file content changed. Revalidating")
     accounts_failed_validation = [account_name for account_name in discord_id_nickname_dict.keys() if not validate_both_values(discord_id_nickname_dict[account_name]["discord_user_id"], discord_id_nickname_dict[account_name]["nickname"])]
@@ -76,7 +79,9 @@ def check_discord_id_nickname(notification=False):
             logger.info(f"""These accounts were added since last time they got checked: '{"','".join(newly_added_accounts)}'.""")
         logger.info("Let's set them up.")
         discord_id_nickname_dict = set_up_specific_accounts(accounts_failed_validation+newly_added_accounts, discord_id_nickname_dict)
-    discord_id_nickname_full_process(json_file, discord_id_nickname_dict)        
+    discord_id_nickname_full_process(json_file, discord_id_nickname_dict)
+    
+    return console_msg
     
 def change_discord_id_nickname_psa():
     logger.info("---")

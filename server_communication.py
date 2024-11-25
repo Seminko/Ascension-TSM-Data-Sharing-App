@@ -5,7 +5,7 @@ from config import REQUEST_TIMEOUT, HTTP_TRY_CAP, VERSION, SEPARATOR, ADAPTER,\
     UPDATE_INTERVAL_SECONDS, GITHUB_REPO_URL
 from logger_config import logger
 from toast_notification import create_update_notification # this needs to be before get_wft_folder (if I remember correctly)
-from generic_helper import prompt_yes_no, run_updater, get_update_preferences
+from generic_helper import prompt_yes_no, run_updater, get_update_preferences, clear_message
 
 # %% MODULE IMPORTS
 
@@ -28,7 +28,7 @@ session = requests.Session()
 session.mount("https://", ADAPTER)
 session.mount("http://", ADAPTER)
 
-def check_for_new_versions():
+def check_for_new_versions(console_msg=""):
     update_automatically_without_prompting = get_update_preferences()
     version_list = get_version_list()
     if version_list:
@@ -39,6 +39,7 @@ def check_for_new_versions():
             if update_automatically_without_prompting:
                 run_updater()
                 sys.exit()
+            console_msg = clear_message(console_msg)
             if any([k for k, v in newer_versions.items() if v]):
                 create_update_notification(mandatory=True)
                 logger.critical("There is a MANDATORY update for this app. WILL NOT run until you update!")
@@ -63,8 +64,8 @@ def check_for_new_versions():
         else:
             logger.debug(f"Current version {VERSION} is the most up-to-date")
             logger.debug(SEPARATOR)
-        return newest_version
-    return None
+        return newest_version, console_msg
+    return None, console_msg
 
 def generate_chunks(file_object, chunk_size=1024):
     while True:

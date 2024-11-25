@@ -242,7 +242,7 @@ def main():
     loading_char_idx = 0
     
     generic_helper.app_start_logging()
-    max_version = server_communication.check_for_new_versions()
+    max_version, _ = server_communication.check_for_new_versions()
     
     handle_messages()
     
@@ -297,7 +297,7 @@ def main():
             if (current_upload_loop_count != 0 and generic_helper.seconds_until_next_trigger(current_upload_loop_count, UPLOAD_LOOPS_PER_UPDATE) == 0) or max_version == None:
                 msg += generic_helper.write_message("Checking new releases", append=True if msg else False)
                 time.sleep(0.5)
-                max_version = server_communication.check_for_new_versions()
+                max_version, msg = server_communication.check_for_new_versions()
                 
             "MESSAGES"
             if (current_upload_loop_count != 0 and generic_helper.seconds_until_next_trigger(current_upload_loop_count, UPLOAD_LOOPS_PER_GET_MESSAGES) == 0):
@@ -309,7 +309,7 @@ def main():
             if current_upload_loop_count != 0 and generic_helper.seconds_until_next_trigger(current_upload_loop_count, UPLOAD_LOOPS_PER_DISCORD_ID_NICKNAME) == 0:
                 msg += generic_helper.write_message("Checking nickname changes", append=True if msg else False)
                 time.sleep(0.5)
-                check_discord_id_nickname(notification=True)
+                msg = check_discord_id_nickname(notification=True, console_msg=msg)
 
             if has_ascension_been_running and not is_ascension_running_now:
                 has_ascension_been_running = False
