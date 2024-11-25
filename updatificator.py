@@ -3,7 +3,7 @@
 from get_endpoints import get_latest_release_endpoint
 from config import GITHUB_REPO_URL, DISCORD_INVITE_LINK
 
-# %% LOCAL IMPORTS
+# %% MODULE IMPORTS
 
 import logging
 import os
