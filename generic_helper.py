@@ -7,7 +7,6 @@ from config import SCRIPT_DIR, NUMBER_OF_LOGS_TO_KEEP, SEPARATOR, MAIN_SEPARATOR
     GITHUB_REPO_URL, DISCORD_INVITE_LINK, UPDATE_PREFERENCES_PATH, UPDATE_PREFERENCES_FILE_NAME
 from toast_notification import create_generic_notification
 
-
 # %% MODULE IMPORTS
 
 import os

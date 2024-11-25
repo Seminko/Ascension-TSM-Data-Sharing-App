@@ -325,6 +325,6 @@ if __name__ == "__main__":
     try:
         main()
     except Exception:
-        create_generic_notification("Exception!", f"An exception occured. Report it pls!", urgent=True)
+        create_generic_notification("Exception!", "An exception occured. Report it pls!", urgent=True)
         generic_helper.clear_message(msg)
         generic_helper.log_exception_message_and_quit(max_version)
