@@ -16,7 +16,14 @@ import time
 
 # %% FUNCTIONS
 
-current_tries = {"upload_tries": 0, "download_tries": 0, "check_version_tries": 0, "set_user_tries": 0, "set_download_stats_tries": 0}
+current_tries = {
+    "upload_tries": 0,
+    "download_tries": 0,
+    "check_version_tries": 0,
+    "set_user_tries": 0,
+    "set_download_stats_tries": 0,
+    "get_messages_tries": 0
+}
 session = requests.Session()
 session.mount("https://", ADAPTER)
 session.mount("http://", ADAPTER)
@@ -69,6 +76,9 @@ def generate_chunks(file_object, chunk_size=1024):
 def get_data_from_server(latest_scans_per_realm):
     return make_http_request("get_data_from_server", latest_scans_per_realm)
 
+def get_messages():
+    return make_http_request("get_messages")
+
 def get_version_list():
     return make_http_request("check_version")
 
@@ -103,6 +113,12 @@ def make_http_request(purpose, data_to_send=None):
         current_tries_key = "set_download_stats_tries"
         url = get_endpoints.get_download_stats_endpoint()
         request_eval_str = f"session.post('{url}', json=data_to_send, timeout={REQUEST_TIMEOUT})"
+    elif purpose == "get_messages":
+        init_debug_log = "Getting messages"
+        fail_debug_log = "Getting messages failed"
+        current_tries_key = "get_messages_tries"
+        url = get_endpoints.get_messages_endpoint()
+        request_eval_str = f"session.get('{url}', timeout={REQUEST_TIMEOUT})"
     else:
         raise TypeError("make_http_request purpose is not recognized")
     

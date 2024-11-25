@@ -10,6 +10,7 @@ import generic_helper
 from config import GITHUB_REPO_URL, APP_NAME
 from toast_notification import create_generic_notification
 from task_scheduler import re_set_startup_task
+from messages import handle_messages
 
 # %% MODULE IMPORTS
 
@@ -24,7 +25,7 @@ import copy
 max_version = None
 from config import VERSION, HTTP_TRY_CAP, UPLOAD_LOOPS_PER_DOWNLOAD,\
     UPLOAD_LOOPS_PER_UPDATE, UPLOAD_LOOPS_PER_DISCORD_ID_NICKNAME,\
-    UPLOAD_INTERVAL_SECONDS, SEPARATOR
+    UPLOAD_LOOPS_PER_GET_MESSAGES, UPLOAD_INTERVAL_SECONDS, SEPARATOR
 from server_communication import current_tries
 msg = ""
 
@@ -243,6 +244,8 @@ def main():
     generic_helper.app_start_logging()
     max_version = server_communication.check_for_new_versions()
     
+    handle_messages()
+    
     if not lua_json_helper.json_file_initialized():
         lua_json_helper.initiliaze_json()
     
@@ -295,6 +298,12 @@ def main():
                 msg += generic_helper.write_message("Checking new releases", append=True if msg else False)
                 time.sleep(0.5)
                 max_version = server_communication.check_for_new_versions()
+                
+            "MESSAGES"
+            if (current_upload_loop_count != 0 and generic_helper.seconds_until_next_trigger(current_upload_loop_count, UPLOAD_LOOPS_PER_GET_MESSAGES) == 0):
+                msg += generic_helper.write_message("Getting messages", append=True if msg else False)
+                time.sleep(0.5)
+                msg = handle_messages(msg)
             
             "DISCORD ID / NICKNAME CHECK"
             if current_upload_loop_count != 0 and generic_helper.seconds_until_next_trigger(current_upload_loop_count, UPLOAD_LOOPS_PER_DISCORD_ID_NICKNAME) == 0:
