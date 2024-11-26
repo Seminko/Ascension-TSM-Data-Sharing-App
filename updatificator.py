@@ -130,13 +130,17 @@ def remove_and_rename(main_app_exe_path, main_app_exe_path_temp, retries=5, dela
             
 if __name__ == "__main__":
     try:
-        main_app_pid = int(sys.argv[1])
-        main_app_exe_path = sys.argv[2]
+        try:
+            main_app_pid = int(sys.argv[1])
+            main_app_exe_path = sys.argv[2]
+        except IndexError:
+            input("Don't run updater manually. Press Enter to close the console")
+            sys.exit()
         
         logger.debug(f"Main app pid: {main_app_pid}")
         logger.debug(f"Main app exe path: '{main_app_exe_path}'")
         
-        url = get_latest_release()
+        url = get_latest_release_endpoint()
         main_app_exe_path_temp = re.sub("\.exe", "_downloaded_new_version_to_be_renamed.exe", main_app_exe_path)
         if download_exe(url, main_app_exe_path_temp):
             kill_process_by_pid(main_app_pid)
