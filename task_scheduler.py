@@ -14,9 +14,13 @@ import re
 
 # %% FUNCTIONS
 
-def create_task_from_xml(task_name, exe_path, working_directory, xml_path):
+def create_task_from_xml(task_name, exe_path, working_directory, xml_path, prompt=True):
     new_line_regex = r"(?:\n+|\s\s+)"
-    if prompt_yes_no("Would you like to create a scheduled task so that the app runs on startup?"):
+    if prompt:
+        create_task = prompt_yes_no("Would you like to create a scheduled task so that the app runs on startup?")
+    else:
+        create_task = True
+    if create_task:
         create_task_xml(task_name, exe_path, working_directory, xml_path)
         try:
             # Create the task from the XML configuration file
@@ -139,4 +143,4 @@ def delete_task(task_name):
 def re_set_startup_task():
     delete_task_success = delete_task("TSM Data Sharing App")
     if delete_task_success:
-        create_task_from_xml(task_name=APP_NAME_WITHOUT_VERSION, exe_path=EXE_PATH, working_directory=SCRIPT_DIR, xml_path=XML_TASK_DEFINITION_PATH)
+        create_task_from_xml(task_name=APP_NAME_WITHOUT_VERSION, exe_path=EXE_PATH, working_directory=SCRIPT_DIR, xml_path=XML_TASK_DEFINITION_PATH, prompt=False)
