@@ -36,7 +36,7 @@ def handle_messages(console_msg=""):
         console_msg = clear_message(console_msg)
         for idx, msg in enumerate(messages_to_process):
             create_generic_notification("For your information", msg["message"], urgent=False)
-            logger.info(msg["message"])
+            logger.info(f'SERVER MESSAGE: {msg["message"]}')
             logger.info(SEPARATOR)
             processed_messages.append(msg)
 
