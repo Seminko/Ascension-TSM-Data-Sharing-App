@@ -59,7 +59,7 @@ def check_for_new_versions(console_msg=""):
                     run_updater()
                     sys.exit()
                 else:
-                    logger.info(f"Skipping update until you restart the app. Will remind you in {UPDATE_INTERVAL_SECONDS/60/60} hours otherwise.")
+                    logger.info(f"Will ask again once you restart the app or in {UPDATE_INTERVAL_SECONDS/60/60} hours if you don't.")
             logger.info(SEPARATOR)
         else:
             logger.debug(f"Current version {VERSION} is the most up-to-date")
