@@ -118,7 +118,7 @@ def get_newly_added_accounts(json_file):
 
 def get_user_id_initial(unhashed_account_names, ):
     while True:
-        logger.info("For stats / leaderboards let's link the account name(s) to a nickname you go by")
+        logger.info("For stats / leaderboards let's link the account name(s) to a nickname you go by.")
         logger.info("Optional: give your Discord User ID, if you want to be tagged when posting stats.")
         if not prompt_yes_no("Would you like to participate?"):
             logger.info("Setting '<no username>' as your nickname.")
