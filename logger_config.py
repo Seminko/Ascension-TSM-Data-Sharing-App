@@ -14,7 +14,7 @@ class NoExceptionFilter(logging.Filter):
     def filter(self, record):
         # If the log record is at EXCEPTION level, filter it out (return False)
         return not record.exc_info
-    
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)  # Set the overall log level to DEBUG
 

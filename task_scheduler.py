@@ -118,7 +118,7 @@ def create_task_xml(task_name, exe_path, working_directory, xml_path):
         tree.write(xml_file, encoding='utf-16', xml_declaration=True)
 
     logger.debug(f"Task definition XML file '{xml_path}' created successfully.")
-    
+
 def delete_task(task_name):
     new_line_regex = r"(?:\n+|\s\s+)"
     try:

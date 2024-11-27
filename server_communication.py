@@ -124,7 +124,7 @@ def make_http_request(purpose, data_to_send=None):
         request_eval_str = f"session.get('{url}', timeout={REQUEST_TIMEOUT})"
     else:
         raise TypeError("make_http_request purpose is not recognized")
-    
+
     logger.debug(init_debug_log)
     try:
         with eval(request_eval_str) as response:
@@ -134,7 +134,7 @@ def make_http_request(purpose, data_to_send=None):
                 logger.debug(f"{process_response_text(response.text)}")
             else:
                 logger.debug(f"Status code: {response.status_code}")
-    
+
             response.raise_for_status()
             response_json = response.json()
     except Exception as e:
@@ -143,7 +143,7 @@ def make_http_request(purpose, data_to_send=None):
         if current_tries[current_tries_key] > HTTP_TRY_CAP:
             raise type(e)(get_endpoints.remove_endpoint_from_str(e)) from None
         return None
-    
+
     return response_json
 
 def process_response_text(response_text):

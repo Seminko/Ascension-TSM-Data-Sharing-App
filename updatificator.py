@@ -44,7 +44,7 @@ class NoExceptionFilter(logging.Filter):
     def filter(self, record):
         # If the log record is at EXCEPTION level, filter it out (return False)
         return not record.exc_info
-    
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)  # Set the overall log level to DEBUG
 
@@ -83,17 +83,17 @@ def kill_process_by_pid(pid):
         pass
     except psutil.AccessDenied:
         logger.info("Access denied")
-    
+
 def run_main_app(main_app_exe_path):
     logger.info("Running updated main app")
     subprocess.Popen([main_app_exe_path], creationflags=subprocess.CREATE_NEW_CONSOLE)
-    
+
 def download_exe(url, save_path, chunk_size=8192):
     logger.info("Downloading the latest version")
     session = requests.Session()
     session.mount("https://", ADAPTER)
     session.mount("http://", ADAPTER)
-    
+
     sleep_coeficient = 5
     current_try = 1
     max_tries = 5
@@ -127,7 +127,7 @@ def remove_and_rename(main_app_exe_path, main_app_exe_path_temp, retries=5, dela
             logger.debug("PermissionError, trying again")
             time.sleep(delay)
     raise ValueError("Even after {retries} retries, couldn't remove the original file: '{main_app_exe_path}'.")
-            
+
 if __name__ == "__main__":
     try:
         try:
@@ -136,10 +136,10 @@ if __name__ == "__main__":
         except IndexError:
             input("Don't run updater manually. Press Enter to close the console")
             sys.exit()
-        
+
         logger.debug(f"Main app pid: {main_app_pid}")
         logger.debug(f"Main app exe path: '{main_app_exe_path}'")
-        
+
         url = get_latest_release_endpoint()
         main_app_exe_path_temp = re.sub("\.exe", "_downloaded_new_version_to_be_renamed.exe", main_app_exe_path)
         if download_exe(url, main_app_exe_path_temp):

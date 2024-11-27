@@ -17,7 +17,7 @@ def create_generic_notification(title, desc, urgent=False):
     if urgent:
         scenario = " scenario='urgent'"
         ms_winsoundevent = "Notification.Looping.Call10"
-    
+
     tString = f"""
     <toast duration='long'{scenario}>
         <audio src='ms-winsoundevent:{ms_winsoundevent}' loop='false' silent='false'/>
@@ -28,20 +28,20 @@ def create_generic_notification(title, desc, urgent=False):
             </binding>
         </visual>
     </toast>
-    
+
     """
-    
+
     # Load the XML content into the notification
     xDoc = dom.XmlDocument()
     xDoc.load_xml(tString)
-    
+
     # Show the toast notification
     notifier.show(ToastNotification(xDoc))
 
 def create_update_notification(mandatory=False):
     # Create the toast notifier
     notifier = ToastNotificationManager.create_toast_notifier(APP_NAME_WITHOUT_VERSION)
-    
+
     # Define the title, description, and URL
     if mandatory:
         title = "⚠️ MANDATORY UPDATE ⚠️"
@@ -51,7 +51,7 @@ def create_update_notification(mandatory=False):
         title = "Optional Update Available"
         desc = "Despite the update being optional, it would be better for everyone if you updated.\nThe app is now paused and is waiting for your input."
         scenario = ""
-    
+
     # Toast XML with clickable description (action)
     tString = f"""
     <toast duration='long'{scenario}>
@@ -64,10 +64,10 @@ def create_update_notification(mandatory=False):
         </visual>
     </toast>
     """
-    
+
     # Load the XML content into the notification
     xDoc = dom.XmlDocument()
     xDoc.load_xml(tString)
-    
+
     # Show the toast notification
     notifier.show(ToastNotification(xDoc))

@@ -37,7 +37,7 @@ def update_preferences_string_to_bool(update_preferences):
         update_preferences["update_automatically_without_prompting"] = False
         changed = True
     return changed, update_preferences
-    
+
 def clear_message(msg):
     sys.stdout.write('\r' + ' ' * len(msg) + '\r')
     sys.stdout.flush()
@@ -66,7 +66,7 @@ def get_loading_msg(is_ascension_running_now, loading_char_idx, current_time, la
 def interruptible_sleep(seconds):
     start_time = time.time()
     end_time = start_time + seconds
-    
+
     while time.time() < end_time:
         time.sleep(0.1)  # Sleep in smaller increments
 
@@ -87,10 +87,10 @@ def log_exception_message_and_quit(max_version):
         exception_msg = f"An exception occurred, likely because you're not using the most recent version of this app. Before reporting, please download the latest release (EXE) here: '{GITHUB_REPO_URL}/releases'. If that doesn't help, send the logs to Mortificator on Discord ({DISCORD_INVITE_LINK} --> Other DEVs Addons (N-Z) --> #tsm-data-sharing - tag @Mortificator) or create an issue on Github ({GITHUB_REPO_URL}/issues)"
     else:
         exception_msg = f"An exception occurred. Please send the logs to Mortificator on Discord ({DISCORD_INVITE_LINK} --> Other DEVs Addons (N-Z) --> #tsm-data-sharing - tag @Mortificator) or create an issue on Github ({GITHUB_REPO_URL}/issues)"
-    
+
     logger.critical(exception_msg)
     logger.exception("Exception")
-    
+
     input("Press Enter to close the console")
 
 def prompt_yes_no(message):
@@ -102,7 +102,7 @@ def prompt_yes_no(message):
             return True
         elif response in ["n", "no", "nope", "nah", "ne", "nein"]:
             return False
-        
+
 def get_update_preferences():
     update_preferences = None
     file_initialized_previously = os.path.exists(UPDATE_PREFERENCES_PATH)
@@ -116,11 +116,11 @@ def get_update_preferences():
         write_to_json(UPDATE_PREFERENCES_PATH, update_preferences)
         logger.info(f"If you ever change your mind, delete '{UPDATE_PREFERENCES_FILE_NAME}' and it will trigger")
         logger.info("this setup again. Or, if you're brave, open the file and change the value to true / false.")
-    
+
     if update_preferences is None:
         update_preferences_str = read_from_json(UPDATE_PREFERENCES_PATH)
         update_preferences = json.loads(update_preferences_str)
-    
+
     logger.debug(f'update_automatically_without_prompting: {update_preferences["update_automatically_without_prompting"]}')
     if isinstance(update_preferences["update_automatically_without_prompting"], bool):
         if not file_initialized_previously:
@@ -134,7 +134,7 @@ def get_update_preferences():
                 logger.info(SEPARATOR)
             return update_preferences["update_automatically_without_prompting"]
         logger.critical(f"It seems you changed '{UPDATE_PREFERENCES_FILE_NAME}'. The only allowed values are true / false.")
-    
+
     raise ValueError('update_preferences["update_automatically_without_prompting"] is not a bool!')
 
 def remove_old_logs():
@@ -157,11 +157,11 @@ def remove_old_logs():
     else:
         logger.debug("No logs to be removed")
     logger.debug(SEPARATOR)
-    
+
 def run_updater():
     logger.debug("Running updater")
     subprocess.Popen([UPDATER_PATH, str(os.getpid()), EXE_PATH], creationflags=subprocess.CREATE_NEW_CONSOLE)
-    
+
 def seconds_until_next_trigger(current_upload_loops_count, trigger_interval_loops):
     remainder = current_upload_loops_count % trigger_interval_loops
     if remainder == 0:
@@ -185,7 +185,7 @@ def write_idling_message(old_msg, is_ascension_running_now, loading_char_idx, cu
 def write_to_json(json_path, json_dict):
     with open(json_path, "w") as outfile:
         outfile.write(json.dumps(json_dict, indent=4))
-        
+
 def read_from_json(json_path):
     with open(json_path, "r") as file:
         return file.read()
@@ -200,19 +200,19 @@ def write_to_upload_stats(upload_dict):
                     upload_stats_json["total_upload_count"] += 1
                 else:
                     upload_stats_json["total_upload_count"] = 1
-                
+
                 if "total_items_updated" in upload_stats_json:
                     upload_stats_json["total_items_updated"] += upload_dict["items_updated"]
                 else:
                     upload_stats_json["total_items_updated"] = upload_dict["items_updated"]
-                    
+
                 if "individual_uploads" in upload_stats_json:
                     upload_stats_json["individual_uploads"].append(upload_dict)
                 else:
                     upload_stats_json["individual_uploads"] = [upload_dict]
-                
+
                 write_to_json(UPLOAD_STATS_PATH, upload_stats_json)
-                    
+
                 if upload_stats_json["total_upload_count"] in UPLOAD_STATS_ACHIEVEMENTS:
                     create_generic_notification("ACHIEVEMENT UNLOCKED!", f"{UPLOAD_STATS_ACHIEVEMENTS[upload_stats_json['total_upload_count']].replace('ACHIEVEMENT UNLOCKED!', '')}&#10;So far you helped update {upload_stats_json['total_items_updated']:,} items.")
                     logger.info(SEPARATOR)
@@ -223,16 +223,16 @@ def write_to_upload_stats(upload_dict):
                     logger.info(SEPARATOR)
                     logger.info("Steady uploader! Big thanks for another 50 uploads.")
                     logger.info(f"So far you uploaded {upload_stats_json['total_upload_count']:,} times and helped update {upload_stats_json['total_items_updated']:,} items.")
-                    
+
                 return
 
     upload_stats_json = {}
     upload_stats_json["total_upload_count"] = 1
     upload_stats_json["total_items_updated"] = upload_dict["items_updated"]
     upload_stats_json["individual_uploads"] = [upload_dict]
-    
+
     write_to_json(UPLOAD_STATS_PATH, upload_stats_json)
-        
+
     create_generic_notification("ACHIEVEMENT UNLOCKED!", f"Your first upload! Keep it up! Proud of you!&#10;So far you helped update {upload_stats_json['total_items_updated']:,} items.")
     logger.info(SEPARATOR)
     logger.info("ACHIEVEMENT UNLOCKED! Your first upload! Keep it up! Proud of you!")

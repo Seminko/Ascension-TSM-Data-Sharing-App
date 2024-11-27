@@ -20,11 +20,11 @@ def handle_messages(console_msg=""):
     if messages_from_server is None:
         logger.debug(f"Getting massaged failed. Will retry next round. ({current_tries['get_messages_tries']}/{HTTP_TRY_CAP})")
         return console_msg
-    
+
     if not messages_from_server:
         logger.debug("There are no messages to display")
         return console_msg
-    
+
     file_exists = os.path.exists(MESSAGES_FILE_PATH)
     if file_exists:
         processed_messages = json.loads(read_from_json(MESSAGES_FILE_PATH))
@@ -41,5 +41,5 @@ def handle_messages(console_msg=""):
             processed_messages.append(msg["message_id"])
         
         write_to_json(MESSAGES_FILE_PATH, processed_messages)
-    
+
     return console_msg

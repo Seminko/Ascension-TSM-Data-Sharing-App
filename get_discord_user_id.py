@@ -41,7 +41,7 @@ def check_discord_id_nickname(notification=False, console_msg=""):
                     logger.info("Discord User ID / Nickname file cannot be parsed. Please set it up again")
                     discord_id_nickname_full_process(json_file)
                     return console_msg
-                    
+
                 if json_file.get("username_last_value") == discord_id_nickname_dict and is_account_list_unchanged(json_file):
                     logger.debug("Despite the file being modified content didn't change and no new accounts added")
                     set_discord_id_nickname_to_main_json_file(json_file, discord_id_nickname_dict)
@@ -53,18 +53,18 @@ def check_discord_id_nickname(notification=False, console_msg=""):
             logger.debug("Account list changed")
             discord_id_nickname_str = get_discord_id_nickname_from_file()
             discord_id_nickname_dict = parse_discord_id_nickname_str_to_dict(discord_id_nickname_str)
-            
+
             if discord_id_nickname_dict is None:
                 console_msg = clear_message(console_msg)
                 logger.info("Discord User ID / Nickname file cannot be parsed. Please set it up again")
                 discord_id_nickname_full_process(json_file)
                 return console_msg
-                
+
             if json_file.get("username_last_value") == discord_id_nickname_dict and is_account_list_unchanged(json_file):
                 logger.debug("Despite the file being modified content didn't change and no new accounts added")
                 set_discord_id_nickname_to_main_json_file(json_file, discord_id_nickname_dict)
                 return console_msg
-    
+
     console_msg = clear_message(console_msg)
     if json_file.get("username_last_value") != discord_id_nickname_dict:
         logger.info("Discord User ID / Nickname file content changed. Revalidating")
@@ -80,9 +80,9 @@ def check_discord_id_nickname(notification=False, console_msg=""):
         logger.info("Let's set them up.")
         discord_id_nickname_dict = set_up_specific_accounts(accounts_failed_validation+newly_added_accounts, discord_id_nickname_dict)
     discord_id_nickname_full_process(json_file, discord_id_nickname_dict)
-    
+
     return console_msg
-    
+
 def change_discord_id_nickname_psa():
     logger.info("---")
     logger.info("If you ever want to change your Discord User ID and / or nickname, you can update it")
@@ -124,13 +124,13 @@ def get_user_id_initial(unhashed_account_names, ):
             logger.info("Setting '<no username>' as your nickname.")
             change_discord_id_nickname_psa()
             return {uan: {"discord_user_id": None, "nickname": "<no username>"} for uan in unhashed_account_names}
-        
+
         if len(unhashed_account_names) == 1:
             logger.info("---")
             discord_user_id_nickname_dict = get_user_id_input()
             change_discord_id_nickname_psa()
             return {unhashed_account_names[0]: discord_user_id_nickname_dict}
-        
+
         logger.info("---")
         logger.info(f"There are {len(unhashed_account_names)} accounts:")
         logger.info(f"""'{"','".join(sorted(unhashed_account_names))}'""")
@@ -138,7 +138,7 @@ def get_user_id_initial(unhashed_account_names, ):
             discord_user_id_nickname_dict = get_user_id_input()
             change_discord_id_nickname_psa()
             return {uan: discord_user_id_nickname_dict for uan in unhashed_account_names}
-        
+
         logger.info("---")
         logger.info("Let's set up all the accounts, even the ones that are not yours.")
         logger.info("Don't set Discord User ID for accounts which are not yours. (If you're not sure.)")
@@ -200,12 +200,12 @@ def prompt_for_nickname():
             return nickname
         else:
             logger.info("Invalid nickname. Please try again.")
-    
+
 def set_discord_id_nickname_to_main_json_file(json_file, discord_id_nickname_dict):
     json_file["username_last_modified"] = os.path.getmtime(NICKNAME_FILE_NAME_PATH)
     json_file["username_last_value"] = discord_id_nickname_dict
     lua_json_helper.write_json_file(json_file)
-    
+
 def set_up_specific_accounts(accounts_to_be_set_up, discord_id_nickname_dict):
     for account in accounts_to_be_set_up:
         logger.info(f"Setting up account '{account}'")

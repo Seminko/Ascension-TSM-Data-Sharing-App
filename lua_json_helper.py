@@ -61,7 +61,7 @@ def get_lua_file_paths():
     json_file = read_json_file()
     wtf_folder = json_file["wtf_path"]
     lua_file_paths = get_tsm_auctiondb_lua_files(wtf_folder)
-    
+
     return lua_file_paths, json_file
 
 def json_file_initialized():
@@ -92,7 +92,7 @@ def get_tsm_auctiondb_lua_files(wtf_folder):
     logger.debug("Getting all lua files for all accounts")
     "Gets 'TradeSkillMaster_AuctionDB.lua' file paths for all accounts"
     account_names = os.listdir(os.path.join(wtf_folder, "Account"))
-    
+
     found_file_path_list = []
     file_path_list = []
     for account_name in account_names:
@@ -104,7 +104,7 @@ def get_tsm_auctiondb_lua_files(wtf_folder):
         file_path_list.append(path)
         if os.path.isfile(path):
             found_file_path_list.append(path)
-            
+
     if found_file_path_list:
         return found_file_path_list
     else:
@@ -126,7 +126,7 @@ def initiliaze_json():
     lua_file_paths = get_tsm_auctiondb_lua_files(wtf_folder)
     file_info = get_lua_file_path_info(lua_file_paths)
     latest_data = get_latest_scans_across_all_accounts_and_realms(file_info)
-    
+
     logger.debug("Creating json file")
     obj = {}
     obj["wtf_path"] = wtf_folder
