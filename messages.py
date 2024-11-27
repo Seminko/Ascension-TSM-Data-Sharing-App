@@ -30,16 +30,16 @@ def handle_messages(console_msg=""):
         processed_messages = json.loads(read_from_json(MESSAGES_FILE_PATH))
     else:
         processed_messages = []
-        
-    messages_to_process = [msg for msg in messages_from_server if msg["message_id"] not in processed_messages]
+
+    messages_to_process = [msg for msg in messages_from_server if msg["message_id"] not in [m["message_id"] for m in processed_messages]]
     if messages_to_process:
         console_msg = clear_message(console_msg)
         for idx, msg in enumerate(messages_to_process):
             create_generic_notification("For your information", msg["message"], urgent=False)
             logger.info(msg["message"])
             logger.info(SEPARATOR)
-            processed_messages.append(msg["message_id"])
-        
+            processed_messages.append(msg)
+
         write_to_json(MESSAGES_FILE_PATH, processed_messages)
 
     return console_msg
