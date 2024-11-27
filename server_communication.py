@@ -2,9 +2,9 @@
 
 import get_endpoints
 from config import REQUEST_TIMEOUT, HTTP_TRY_CAP, VERSION, SEPARATOR, ADAPTER,\
-    UPDATE_INTERVAL_SECONDS, GITHUB_REPO_URL
+    UPDATE_INTERVAL_SECONDS, GITHUB_REPO_URL, UPDATE_PREFERENCES_FILE_NAME
 from logger_config import logger
-from toast_notification import create_update_notification # this needs to be before get_wft_folder (if I remember correctly)
+from toast_notification import create_update_notification, create_generic_notification # this needs to be before get_wft_folder (if I remember correctly)
 from generic_helper import prompt_yes_no, run_updater, get_update_preferences, clear_message
 
 # %% MODULE IMPORTS
@@ -37,6 +37,8 @@ def check_for_new_versions(console_msg=""):
         if newer_versions:
             logger.debug(f"""There are several newer versions: '{", ".join(newer_versions)}'""")
             if update_automatically_without_prompting:
+                logger.info(f"Updating the application without prompting (as per '{UPDATE_PREFERENCES_FILE_NAME}').")
+                create_generic_notification("Automatic Update", "Updating the application.", urgent=False)
                 run_updater()
                 sys.exit()
             console_msg = clear_message(console_msg)
