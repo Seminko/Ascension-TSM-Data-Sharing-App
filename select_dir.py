@@ -7,7 +7,7 @@ from tkinter import Tk, filedialog
 
 async def select_folder():
     loop = asyncio.get_event_loop()
-    
+
     def run_in_thread():
         root = Tk()
         root.withdraw()  # Hide the main window

@@ -54,7 +54,7 @@ def get_wtf_folder():
 
     if wtf_folder:
         return wtf_folder
-    
+
     while True:
         logger.info("Couldn't find WTF folder automatically. Select it yourself")
         folder_selected_path = asyncio.run(select_folder())
@@ -62,7 +62,7 @@ def get_wtf_folder():
             break
         else:
             logger.info("Selected wrong folder. You must select the 'WTF' folder in Ascension directory. Try again")
-        
+
     return folder_selected_path
 
 def find_wtf_folder(starting_paths, target_folder_name="WTF"):

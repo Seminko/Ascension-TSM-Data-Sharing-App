@@ -7,7 +7,7 @@ from urllib3.util.retry import Retry
 
 # %% FUNCTIONS
 
-VERSION = "1.2.2"
+VERSION = "1.3"
 
 if getattr(sys, 'frozen', False):
     # Running in PyInstaller executable
@@ -17,24 +17,34 @@ else:
     # Running as a regular Python script
     SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
     EXE_PATH = os.path.abspath(__file__)
-    
+
+UPDATER_PATH = os.path.join(SCRIPT_DIR, "updatificator.exe")
+
 XML_TASK_DEFINITION_PATH = os.path.join(SCRIPT_DIR, "startup_task_definition.xml")
-    
+
 JSON_FILE_NAME = "update_times.json"
 JSON_PATH = os.path.join(SCRIPT_DIR, JSON_FILE_NAME)
 
 UPLOAD_STATS_FILE_NAME = "upload_stats.json"
 UPLOAD_STATS_PATH = os.path.join(SCRIPT_DIR, UPLOAD_STATS_FILE_NAME)
 
+UPDATE_PREFERENCES_FILE_NAME = 'update_preferences.json'
+UPDATE_PREFERENCES_PATH = os.path.join(SCRIPT_DIR, UPDATE_PREFERENCES_FILE_NAME)
+
 NICKNAME_FILE_NAME = "discord_id_username.json"
 NICKNAME_FILE_NAME_PATH = os.path.join(SCRIPT_DIR, NICKNAME_FILE_NAME)
 
+MESSAGES_FILE_NAME = "handled_messages.json"
+MESSAGES_FILE_PATH = os.path.join(SCRIPT_DIR, MESSAGES_FILE_NAME)
+
 UPLOAD_INTERVAL_SECONDS = 300
-DOWNLOAD_INTERVAL_SECONDS = 900
-UPDATE_INTERVAL_SECONDS = 9000
+DOWNLOAD_INTERVAL_SECONDS = 300
+GET_MESSAGES_INTERVAL_SECONDS = 300
+UPDATE_INTERVAL_SECONDS = 43200
 DISCORD_ID_NICKNAME_INTERVAL_SECONDS = 86400
 
 UPLOAD_LOOPS_PER_DOWNLOAD = DOWNLOAD_INTERVAL_SECONDS / UPLOAD_INTERVAL_SECONDS
+UPLOAD_LOOPS_PER_GET_MESSAGES = GET_MESSAGES_INTERVAL_SECONDS / UPLOAD_INTERVAL_SECONDS
 UPLOAD_LOOPS_PER_UPDATE = UPDATE_INTERVAL_SECONDS / UPLOAD_INTERVAL_SECONDS
 UPLOAD_LOOPS_PER_DISCORD_ID_NICKNAME = discord_id_nickname_loops = DISCORD_ID_NICKNAME_INTERVAL_SECONDS / UPLOAD_INTERVAL_SECONDS
 
@@ -52,9 +62,13 @@ ADAPTER = HTTPAdapter(max_retries=RETRY_STRATEGY)
 
 NUMBER_OF_LOGS_TO_KEEP = 50
 
-APP_NAME = f"Ascension TSM Data Sharing App v{VERSION}"
+APP_NAME_WITHOUT_VERSION = "Ascension TSM Data Sharing App"
+APP_NAME = f"{APP_NAME_WITHOUT_VERSION} v{VERSION}"
 MAIN_SEPARATOR = "==========================================================================================="
 SEPARATOR = "-------------------------------------------------------------------------------------------"
+
+GITHUB_REPO_URL = "https://github.com/Seminko/Ascension-TSM-Data-Sharing-App"
+DISCORD_INVITE_LINK = "https://discord.gg/uTxuDvuHcn"
 
 UPLOAD_STATS_ACHIEVEMENTS = {
     3: "ACHIEVEMENT UNLOCKED! Your third upload! Steady pace, I like it!",

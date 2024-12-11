@@ -1,12 +1,12 @@
 # %% LOCAL IMPORTS
 
-from config import NICKNAME_FILE_NAME_PATH, SEPARATOR
+from config import NICKNAME_FILE_NAME_PATH, SEPARATOR, GITHUB_REPO_URL
 from logger_config import logger
 import lua_json_helper
 from hash_username import hash_username
 from server_communication import set_user
 from toast_notification import create_generic_notification
-from generic_helper import prompt_yes_no
+from generic_helper import prompt_yes_no, write_to_json, clear_message
 
 # %% MODULE IMPORTS
 
@@ -17,52 +17,55 @@ import os
 
 # %% FUNCTIONS
 
-def check_discord_id_nickname(notification=False):
+def check_discord_id_nickname(notification=False, console_msg=""):
     logger.debug("Checking Discord User ID")
     json_file = lua_json_helper.read_json_file()
     if not os.path.exists(NICKNAME_FILE_NAME_PATH):
         logger.debug("Username not set up yet")
         discord_id_nickname_full_process(json_file)
-        return
+        return console_msg
     else:
         logger.debug("Username set up already")
         if json_file.get("username_last_modified") != os.path.getmtime(NICKNAME_FILE_NAME_PATH):
             logger.debug("Discord User ID / Nickname file modified")
             discord_id_nickname_str = get_discord_id_nickname_from_file()
             if not discord_id_nickname_str:
+                console_msg = clear_message(console_msg)
                 logger.info("Discord User ID / Nickname file is empty. Please set it up again")
                 discord_id_nickname_full_process(json_file)
-                return
+                return console_msg
             else:
                 discord_id_nickname_dict = parse_discord_id_nickname_str_to_dict(discord_id_nickname_str)
                 if discord_id_nickname_dict is None:
+                    console_msg = clear_message(console_msg)
                     logger.info("Discord User ID / Nickname file cannot be parsed. Please set it up again")
                     discord_id_nickname_full_process(json_file)
-                    return
-                    
+                    return console_msg
+
                 if json_file.get("username_last_value") == discord_id_nickname_dict and is_account_list_unchanged(json_file):
                     logger.debug("Despite the file being modified content didn't change and no new accounts added")
                     set_discord_id_nickname_to_main_json_file(json_file, discord_id_nickname_dict)
-                    return
+                    return console_msg
         elif is_account_list_unchanged(json_file):
             logger.debug("Discord User ID / Nickname file remains unchanged")
-            return
+            return console_msg
         else:
             logger.debug("Account list changed")
             discord_id_nickname_str = get_discord_id_nickname_from_file()
             discord_id_nickname_dict = parse_discord_id_nickname_str_to_dict(discord_id_nickname_str)
-            
+
             if discord_id_nickname_dict is None:
+                console_msg = clear_message(console_msg)
                 logger.info("Discord User ID / Nickname file cannot be parsed. Please set it up again")
                 discord_id_nickname_full_process(json_file)
-                return
-                
+                return console_msg
+
             if json_file.get("username_last_value") == discord_id_nickname_dict and is_account_list_unchanged(json_file):
                 logger.debug("Despite the file being modified content didn't change and no new accounts added")
                 set_discord_id_nickname_to_main_json_file(json_file, discord_id_nickname_dict)
-                return
-    
-    
+                return console_msg
+
+    console_msg = clear_message(console_msg)
     if json_file.get("username_last_value") != discord_id_nickname_dict:
         logger.info("Discord User ID / Nickname file content changed. Revalidating")
     accounts_failed_validation = [account_name for account_name in discord_id_nickname_dict.keys() if not validate_both_values(discord_id_nickname_dict[account_name]["discord_user_id"], discord_id_nickname_dict[account_name]["nickname"])]
@@ -76,12 +79,14 @@ def check_discord_id_nickname(notification=False):
             logger.info(f"""These accounts were added since last time they got checked: '{"','".join(newly_added_accounts)}'.""")
         logger.info("Let's set them up.")
         discord_id_nickname_dict = set_up_specific_accounts(accounts_failed_validation+newly_added_accounts, discord_id_nickname_dict)
-    discord_id_nickname_full_process(json_file, discord_id_nickname_dict)        
-    
+    discord_id_nickname_full_process(json_file, discord_id_nickname_dict)
+
+    return console_msg
+
 def change_discord_id_nickname_psa():
     logger.info("---")
-    logger.info("If you ever want to change your Discord User ID and / or nickname,")
-    logger.info("you can update it in 'discord_id_username.json'.")
+    logger.info("If you ever want to change your Discord User ID and / or nickname, you can update it")
+    logger.info("in 'discord_id_username.json'. To remove discord user id, replace the number with null.")
 
 def discord_id_nickname_full_process(json_file, discord_id_nickname_dict=None):
     if discord_id_nickname_dict is None:
@@ -89,8 +94,8 @@ def discord_id_nickname_full_process(json_file, discord_id_nickname_dict=None):
         discord_id_nickname_dict = get_user_id_initial(unhased_account_names)
     "Some might add discord user id as int, which makes sense, so I don't want to bother them with revalidation."
     "The values are being converted to string during validation and finally set as strings before saving the values."
-    discord_id_nickname_dict = {k: {key: str(val) if val is not None else None for key, val in v.items()} for k, v in discord_id_nickname_dict.items()}
-    set_discord_id_nickname_to_file(discord_id_nickname_dict)
+    discord_id_nickname_dict = {k: {key: str(val) if val is not None and val != "" else None for key, val in v.items()} for k, v in discord_id_nickname_dict.items()}
+    write_to_json(NICKNAME_FILE_NAME_PATH, discord_id_nickname_dict)
     set_discord_id_nickname_to_main_json_file(json_file, discord_id_nickname_dict)
     discord_id_nickname_send_to_server(discord_id_nickname_dict)
     logger.info(SEPARATOR)
@@ -113,19 +118,19 @@ def get_newly_added_accounts(json_file):
 
 def get_user_id_initial(unhashed_account_names, ):
     while True:
-        logger.info("For stats / leaderboards let's link the account name(s) to a Discord User ID (preferred).")
-        logger.info("If you don't want to give it or don't have discord, at least give a nickname you go by.")
+        logger.info("For stats / leaderboards let's link the account name(s) to a nickname you go by.")
+        logger.info("Optional: give your Discord User ID, if you want to be tagged when posting stats.")
         if not prompt_yes_no("Would you like to participate?"):
-            logger.info("Setting 'Anonymous' as your nickname.")
+            logger.info("Setting '<no username>' as your nickname.")
             change_discord_id_nickname_psa()
-            return {uan: {"discord_user_id": None, "nickname": "Anonymous"} for uan in unhashed_account_names}
-        
+            return {uan: {"discord_user_id": None, "nickname": "<no username>"} for uan in unhashed_account_names}
+
         if len(unhashed_account_names) == 1:
             logger.info("---")
             discord_user_id_nickname_dict = get_user_id_input()
             change_discord_id_nickname_psa()
             return {unhashed_account_names[0]: discord_user_id_nickname_dict}
-        
+
         logger.info("---")
         logger.info(f"There are {len(unhashed_account_names)} accounts:")
         logger.info(f"""'{"','".join(sorted(unhashed_account_names))}'""")
@@ -133,7 +138,7 @@ def get_user_id_initial(unhashed_account_names, ):
             discord_user_id_nickname_dict = get_user_id_input()
             change_discord_id_nickname_psa()
             return {uan: discord_user_id_nickname_dict for uan in unhashed_account_names}
-        
+
         logger.info("---")
         logger.info("Let's set up all the accounts, even the ones that are not yours.")
         logger.info("Don't set Discord User ID for accounts which are not yours. (If you're not sure.)")
@@ -151,7 +156,7 @@ def get_user_id_input():
     logger.info("Discord User ID is a 18-19 digit number (unique identifier). To get it, you have to enable")
     logger.info("Developer mode in the discord app (cogwheel-advanced-developer mode), then right click")
     logger.info("your name and select Copy User ID. If you're not sure how to enable Developer mode,")
-    logger.info("check Github readme (https://github.com/Seminko/Ascension-TSM-Data-Sharing-App).")
+    logger.info(f"check Github readme ({GITHUB_REPO_URL}).")
     if prompt_yes_no("Would you like to input your Discord User ID?"):
         discord_id = prompt_for_discord_id()
     if discord_id:
@@ -196,15 +201,11 @@ def prompt_for_nickname():
         else:
             logger.info("Invalid nickname. Please try again.")
 
-def set_discord_id_nickname_to_file(discord_id_nickname_dict):
-    with open(NICKNAME_FILE_NAME_PATH, "w") as outfile:
-        outfile.write(json.dumps(discord_id_nickname_dict, indent=4))
-    
 def set_discord_id_nickname_to_main_json_file(json_file, discord_id_nickname_dict):
     json_file["username_last_modified"] = os.path.getmtime(NICKNAME_FILE_NAME_PATH)
     json_file["username_last_value"] = discord_id_nickname_dict
     lua_json_helper.write_json_file(json_file)
-    
+
 def set_up_specific_accounts(accounts_to_be_set_up, discord_id_nickname_dict):
     for account in accounts_to_be_set_up:
         logger.info(f"Setting up account '{account}'")
@@ -216,6 +217,9 @@ def validate_both_values(discord_user_id, nickname):
     return validate_discord_user_id(discord_user_id) and validate_nickname(nickname)
 
 def validate_discord_user_id(discord_user_id):
+    if discord_user_id == "":
+        logger.debug("Discord User ID is empty string. Changing it to None")
+        discord_user_id = None
     if discord_user_id is None:
         logger.debug("Discord User ID validated")
         return True

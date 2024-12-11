@@ -2,6 +2,7 @@
 
 from logger_config import logger
 from generic_helper import prompt_yes_no
+from config import APP_NAME_WITHOUT_VERSION, EXE_PATH, SCRIPT_DIR, XML_TASK_DEFINITION_PATH
 
 # %% MODULE IMPORTS
 
@@ -13,9 +14,13 @@ import re
 
 # %% FUNCTIONS
 
-def create_task_from_xml(task_name, exe_path, working_directory, xml_path):
+def create_task_from_xml(task_name, exe_path, working_directory, xml_path, prompt=True):
     new_line_regex = r"(?:\n+|\s\s+)"
-    if prompt_yes_no("Would you like to create a scheduled task so that the app runs on startup?"):
+    if prompt:
+        create_task = prompt_yes_no("Would you like to create a scheduled task so that the app runs on startup?")
+    else:
+        create_task = True
+    if create_task:
         create_task_xml(task_name, exe_path, working_directory, xml_path)
         try:
             # Create the task from the XML configuration file
@@ -62,7 +67,7 @@ def create_task_xml(task_name, exe_path, working_directory, xml_path):
     author = ET.SubElement(registration_info, 'Author')
     author.text = 'Mortificator'
     description = ET.SubElement(registration_info, 'Description')
-    description.text = 'Will run Ascension TSM Data Sharing App on user login'
+    description.text = f'Will run {APP_NAME_WITHOUT_VERSION} on user login'
 
     # Triggers element
     triggers = ET.SubElement(task, 'Triggers')
@@ -113,7 +118,7 @@ def create_task_xml(task_name, exe_path, working_directory, xml_path):
         tree.write(xml_file, encoding='utf-16', xml_declaration=True)
 
     logger.debug(f"Task definition XML file '{xml_path}' created successfully.")
-    
+
 def delete_task(task_name):
     new_line_regex = r"(?:\n+|\s\s+)"
     try:
@@ -127,7 +132,15 @@ def delete_task(task_name):
         # if not "successfully deleted" in result.stdout:
         #     raise Exception(result.stdout)
         logger.debug(f"Scheduled task '{task_name}' deleted successfully.")
+        return True
     except subprocess.CalledProcessError as e:
         logger.debug(f"""Failed to delete startup task - probably because it doesn't exist / has never existed. Error: '{re.sub(new_line_regex, " ", e.stderr).strip()}'""")
+        return False
     except Exception as e:
         logger.debug(f"Failed to delete startup task. Error: '{str(repr(e))}'")
+        return None
+
+def re_set_startup_task():
+    delete_task_success = delete_task("TSM Data Sharing App")
+    if delete_task_success:
+        create_task_from_xml(task_name=APP_NAME_WITHOUT_VERSION, exe_path=EXE_PATH, working_directory=SCRIPT_DIR, xml_path=XML_TASK_DEFINITION_PATH, prompt=False)
