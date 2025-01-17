@@ -19,8 +19,8 @@ Thanks to [Szyler](https://github.com/Szyler) and [MummieSenpai](https://github.
 &nbsp;
 
 ## What it does - TLDR
-Periodically checks for a change to scanned data, uploads the latest to the database and downloads the latest to your local PC, mimicking what the official TSM app (used on retail WoW) does. As they describe it: "keeps your addon data up-to-date".<br>
-In other words, you will always have access to the most recent prices.<br>
+Automatically downloads latest price data to your local PC / uploads price data when you do an AH scan, mimicking what the official TSM app (used on retail WoW) does. As they describe it: "keeps your addon data up-to-date".<br>
+In other words, you will always have access to the most recent prices and all the other TSM data points you love!<br>
 
 ## What it does - non-TLDR
 When first run, it will ask you whether you want to create a scheduled task to run the app on startup (input Y or N in the console and press Enter). This will happen only when first running the script. The idea behind it running on startup is due to the fact that we can only update data in the WTF folder when Ascension is not running, because each /reload, logout to char select or game restart automatically writes to the files (ie it would rewrite what we put there). Hence whenever you launch Ascension you will have the latest data there is. More info in the FAQ section below.<br>
