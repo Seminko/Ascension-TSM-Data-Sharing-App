@@ -79,6 +79,13 @@ def generate_chunks(file_object, chunk_size=1024):
 def get_data_from_server(latest_scans_per_realm):
     return make_http_request("get_data_from_server", latest_scans_per_realm)
 
+def get_latest_version():
+    version_list = get_version_list()
+    if version_list:
+        newest_version = sorted(list(version_list), reverse=True)[0]
+        return newest_version
+    return None
+
 def get_messages():
     return make_http_request("get_messages")
 

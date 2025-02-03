@@ -327,4 +327,8 @@ if __name__ == "__main__":
     except Exception:
         create_generic_notification("Exception!", "An exception occured. Report it pls!", urgent=True)
         generic_helper.clear_message(msg)
+        # check max version because it could have changed since first running the script
+        max_version_temp = server_communication.get_latest_version()
+        if max_version_temp:
+            max_version = max_version_temp
         generic_helper.log_exception_message_and_quit(max_version)
