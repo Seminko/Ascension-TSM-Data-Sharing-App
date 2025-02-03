@@ -29,13 +29,15 @@ def create_task_from_xml(task_name, exe_path, working_directory, xml_path, promp
                 '/tn', task_name,      # Task name
                 '/xml', xml_path,      # Path to the XML file
                 '/f'                   # Force creation (overwrite if exists)
-            ], capture_output=True, text=True, check=True)
+            ], capture_output=True, text=True, check=True, encoding="utf-8", errors="replace")
             # "stdout is not actually always english :("
             # if not "successfully been created" in result.stdout:
             #     raise Exception(re.sub(new_line_regex, " ", result.stdout).strip())
             logger.info(f"Scheduled task '{task_name}' created successfully")
         except subprocess.CalledProcessError as e:
-            logger.critical(f"""Failed to create startup task. Error: '{re.sub(new_line_regex, " ", e.stderr).strip()}'""")
+            stderr_decoded = e.stderr if isinstance(e.stderr, str) else e.stderr.decode("utf-8", "replace")
+            stderr_decoded = remove_unsupported_chars(stderr_decoded)
+            logger.critical(f"""Failed to create startup task. Error: '{re.sub(new_line_regex, " ", stderr_decoded).strip()}'""")
             logger.exception("Handled exception")
         except Exception as e:
             logger.critical(f"Failed to create startup task. Error: '{str(repr(e))}'")
@@ -127,14 +129,16 @@ def delete_task(task_name):
             'schtasks', '/delete',
             '/tn', task_name,
             '/f'  # Force deletion without confirmation
-        ], capture_output=True, text=True, check=True)
+        ], capture_output=True, text=True, check=True, encoding="utf-8", errors="replace")
         # "stdout is not actually always english :("
         # if not "successfully deleted" in result.stdout:
         #     raise Exception(result.stdout)
         logger.debug(f"Scheduled task '{task_name}' deleted successfully.")
         return True
     except subprocess.CalledProcessError as e:
-        logger.debug(f"""Failed to delete startup task - probably because it doesn't exist / has never existed. Error: '{re.sub(new_line_regex, " ", e.stderr).strip()}'""")
+        stderr_decoded = e.stderr if isinstance(e.stderr, str) else e.stderr.decode("utf-8", "replace")
+        stderr_decoded = remove_unsupported_chars(stderr_decoded)
+        logger.debug(f"""Failed to delete startup task - probably because it doesn't exist / has never existed. Error: '{re.sub(new_line_regex, " ", stderr_decoded).strip()}'""")
         return False
     except Exception as e:
         logger.debug(f"Failed to delete startup task. Error: '{str(repr(e))}'")
@@ -144,3 +148,6 @@ def re_set_startup_task():
     delete_task_success = delete_task("TSM Data Sharing App")
     if delete_task_success:
         create_task_from_xml(task_name=APP_NAME_WITHOUT_VERSION, exe_path=EXE_PATH, working_directory=SCRIPT_DIR, xml_path=XML_TASK_DEFINITION_PATH, prompt=False)
+        
+def remove_unsupported_chars(text):
+    return "".join(c if c.isascii() else "?" for c in text)
