@@ -29,7 +29,7 @@ When first run, it will also create `update_times.json` in the directory where t
 There are two core functionalities:<br>
 - Data download
   - Downloads newest data from the DB.
-  - Happens ONLY when Ascension is not running and is being downloaded every 15 minutes.
+  - Happens ONLY when Ascension is not running and is being downloaded every 5 minutes.
 - Data upload
   - When you do a scan, could be partial or full, please do a /reload when you can. This will make the game write to the LUA file, get detected by the app and uploaded to the DB.
   - The script checks for changes every 5 minutes.
