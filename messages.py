@@ -18,7 +18,7 @@ import json
 def handle_messages(console_msg=""):
     messages_from_server = get_messages()
     if messages_from_server is None:
-        logger.debug(f"Getting massaged failed. Will retry next round. ({current_tries['get_messages_tries']}/{HTTP_TRY_CAP})")
+        logger.debug(f"Getting messages failed. Will retry next round. ({current_tries['get_messages_tries']}/{HTTP_TRY_CAP})")
         return console_msg
 
     if not messages_from_server:
