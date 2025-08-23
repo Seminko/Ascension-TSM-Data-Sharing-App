@@ -7,7 +7,7 @@ from urllib3.util.retry import Retry
 
 # %% FUNCTIONS
 
-VERSION = "1.3.2"
+VERSION = "1.4"
 
 if getattr(sys, 'frozen', False):
     # Running in PyInstaller executable
@@ -69,18 +69,5 @@ SEPARATOR = "-------------------------------------------------------------------
 
 GITHUB_REPO_URL = "https://github.com/Seminko/Ascension-TSM-Data-Sharing-App"
 DISCORD_INVITE_LINK = "https://discord.gg/uTxuDvuHcn"
-
-UPLOAD_STATS_ACHIEVEMENTS = {
-    3: "ACHIEVEMENT UNLOCKED! Your third upload! Steady pace, I like it!",
-    10: "ACHIEVEMENT UNLOCKED! Ten uploads! Heck yea!",
-    25: "ACHIEVEMENT UNLOCKED! Twenty five uploads. Respectable!",
-    50: "ACHIEVEMENT UNLOCKED! Half a hundred. You rock!",
-    100: "ACHIEVEMENT UNLOCKED! Hundred uploads??? Epic!",
-    1000: "ACHIEVEMENT UNLOCKED! A thousand uploads. We're getting into legendary territory!",
-    10000: "ACHIEVEMENT UNLOCKED! TEN THOUSAND! OK, consider yourself a LEGEND!",
-    100000: "ACHIEVEMENT UNLOCKED! Hundred thousand? I mean, other players LOVE you for this, but if you continue there's gonna have to be an intervention :-P",
-    1000000: "ACHIEVEMENT UNLOCKED! MEGA! I mean a million. You're now on par with the Emperor of Mankind. Something tells me we forgot about that intervention we mentioned at 100k uploads...",
-    10000000: "ACHIEVEMENT UNLOCKED! TEN MILLION UPLOADS!!! Real talk, dude, you NEED to stop...",
-}
 
 LOADING_CHARS = ["[   ]","[=  ]","[== ]","[===]","[ ==]","[  =]"]

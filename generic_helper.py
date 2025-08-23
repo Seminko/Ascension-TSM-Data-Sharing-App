@@ -2,9 +2,10 @@
 
 from logger_config import logger
 from config import SCRIPT_DIR, NUMBER_OF_LOGS_TO_KEEP, SEPARATOR, MAIN_SEPARATOR,\
-    APP_NAME, UPLOAD_STATS_PATH, UPLOAD_STATS_ACHIEVEMENTS, UPLOAD_INTERVAL_SECONDS,\
-    LOADING_CHARS, UPLOAD_LOOPS_PER_DOWNLOAD, VERSION, UPDATER_PATH, EXE_PATH,\
-    GITHUB_REPO_URL, DISCORD_INVITE_LINK, UPDATE_PREFERENCES_PATH, UPDATE_PREFERENCES_FILE_NAME
+    APP_NAME, UPLOAD_STATS_PATH, UPLOAD_INTERVAL_SECONDS, LOADING_CHARS,\
+    UPLOAD_LOOPS_PER_DOWNLOAD, VERSION, UPDATER_PATH, EXE_PATH, GITHUB_REPO_URL,\
+    DISCORD_INVITE_LINK, UPDATE_PREFERENCES_PATH, UPDATE_PREFERENCES_FILE_NAME
+from achievements import UPLOAD_STATS_ACHIEVEMENTS, STEADY_UPLOADER_LINES, STEADY_UPLOADER_TITLES
 from toast_notification import create_generic_notification
 
 # %% MODULE IMPORTS
@@ -15,6 +16,7 @@ import time
 import json
 from psutil import process_iter, NoSuchProcess, ZombieProcess
 import subprocess
+import random
 
 # %% FUNCTIONS
 
@@ -213,16 +215,18 @@ def write_to_upload_stats(upload_dict):
 
                 write_to_json(UPLOAD_STATS_PATH, upload_stats_json)
 
-                if upload_stats_json["total_upload_count"] in UPLOAD_STATS_ACHIEVEMENTS:
-                    create_generic_notification("ACHIEVEMENT UNLOCKED!", f"{UPLOAD_STATS_ACHIEVEMENTS[upload_stats_json['total_upload_count']].replace('ACHIEVEMENT UNLOCKED!', '')}&#10;So far you helped update {upload_stats_json['total_items_updated']:,} items.")
+                if len(upload_stats_json["individual_uploads"]) in UPLOAD_STATS_ACHIEVEMENTS:
+                    create_generic_notification("ACHIEVEMENT UNLOCKED!", f"{UPLOAD_STATS_ACHIEVEMENTS[len(upload_stats_json['individual_uploads'])].replace('ACHIEVEMENT UNLOCKED!', '')}&#10;So far you helped update {upload_stats_json['total_items_updated']:,} items.")
                     logger.info(SEPARATOR)
-                    logger.info(UPLOAD_STATS_ACHIEVEMENTS[upload_stats_json['total_upload_count']])
+                    logger.info(UPLOAD_STATS_ACHIEVEMENTS[len(upload_stats_json['individual_uploads'])])
                     logger.info(f"So far you helped update {upload_stats_json['total_items_updated']:,} items.")
-                elif upload_stats_json['total_upload_count'] % 50 == 0:
-                    create_generic_notification("Steady uploader!", f"Big thanks for another 50 uploads.&#10;So far you uploaded {upload_stats_json['total_upload_count']:,} times and helped update {upload_stats_json['total_items_updated']:,} items.")
+                elif len(upload_stats_json["individual_uploads"]) % 50 == 0:
+                    steady_uploader_title = random.choice(STEADY_UPLOADER_TITLES)
+                    steady_uploader_line = random.choice(STEADY_UPLOADER_LINES)
+                    create_generic_notification(steady_uploader_title, f"{steady_uploader_line}&#10;So far you uploaded {len(upload_stats_json['individual_uploads']):,} times and helped update {upload_stats_json['total_items_updated']:,} items.")
                     logger.info(SEPARATOR)
-                    logger.info("Steady uploader! Big thanks for another 50 uploads.")
-                    logger.info(f"So far you uploaded {upload_stats_json['total_upload_count']:,} times and helped update {upload_stats_json['total_items_updated']:,} items.")
+                    logger.info(f"{steady_uploader_title} {steady_uploader_line}")
+                    logger.info(f"So far you uploaded {len(upload_stats_json['individual_uploads']):,} times and helped update {upload_stats_json['total_items_updated']:,} items.")
 
                 return
 
