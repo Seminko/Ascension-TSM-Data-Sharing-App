@@ -5,18 +5,26 @@ import luadata_serialization
 from get_wtf_folder import get_wtf_folder
 from hash_username import hash_username
 from task_scheduler import create_task_from_xml
-from generic_helper import write_to_json
+from generic_helper import write_to_json, clear_message
 from config import SCRIPT_DIR, SEPARATOR, JSON_FILE_NAME,\
     EXE_PATH, XML_TASK_DEFINITION_PATH, JSON_PATH, APP_NAME_WITHOUT_VERSION
 
 # %% MODULE IMPORTS
 
 import os
-import sys
 import re
 import json
+import pathlib
 
 # %% FUNCTIONS
+
+def create_empty_auctiondb_lua_file(auctiondb_lua_file_path):
+    logger.debug(f"No TradeSkillMaster_AuctionDB.lua file in {auctiondb_lua_file_path}, creating it")
+    os.makedirs(auctiondb_lua_file_path, exist_ok=True)
+    with open(os.path.join(auctiondb_lua_file_path, "TradeSkillMaster_AuctionDB.lua"), "w") as outfile:
+        empty_db_str = 'AscensionTSM_AuctionDB = {\n	["profiles"] = {\n		'\
+            '["Default"] = {\n			["lastGetAll"] = 0,\n		},\n	},\n}'
+        outfile.write(empty_db_str)
 
 def get_account_name_from_lua_file_path(lua_file_path):
     match = re.search(r"(?<=(?:\\|/)Account(?:\\|/))[^\\\/]+", lua_file_path)
@@ -57,12 +65,43 @@ def get_lua_file_path_info(lua_file_paths):
         file_updated_list.append(obj)
     return file_updated_list
 
-def get_lua_file_paths():
+def get_lua_file_paths(msg=""):
     json_file = read_json_file()
     wtf_folder = json_file["wtf_path"]
+    
+    """
+    json_file["wtf_path"] was originally a string, changed to list in newer versions
+    needs to be changed retroactively
+    """
+    if isinstance(wtf_folder, str):
+        msg = clear_message(msg)
+        json_file["wtf_path"] = [pathlib.Path(json_file["wtf_path"]).as_posix()]
+        wtf_folder = get_wtf_folder(json_file["wtf_path"])
+        json_file["wtf_path"] = list(set([pathlib.Path(p).as_posix() for p in wtf_folder]))
+        
+        "also fix all the other paths so they are consistent"
+        unique_file_info = {}
+        for item in json_file["file_info"]:
+            posix_path = pathlib.Path(item['file_path']).as_posix()
+            # Create a copy of the item with the POSIX path
+            new_item = {**item, "file_path": posix_path}
+            
+            # Keep only the most recent last_modified
+            if posix_path not in unique_file_info or new_item['last_modified'] > unique_file_info[posix_path]['last_modified']:
+                unique_file_info[posix_path] = new_item
+        
+        unique_file_info_final = list(unique_file_info.values())
+        json_file["file_info"] = unique_file_info_final
+        
+        write_json_file(json_file)
+        wtf_folder = json_file["wtf_path"]
+        
+        logger.info(SEPARATOR)
+        
+    wtf_folder = set(wtf_folder)
     lua_file_paths = get_tsm_auctiondb_lua_files(wtf_folder)
 
-    return lua_file_paths, json_file
+    return lua_file_paths, json_file, msg
 
 def json_file_initialized():
     logger.debug("Checking if json file is initialized")
@@ -72,7 +111,7 @@ def json_file_initialized():
 
 def get_latest_scans_across_all_accounts_and_realms(file_info):
     logger.debug("Getting latest scan ascross all accounts and realms")
-    last_updates = [{"realm": r["realm"], "last_complete_scan": r["last_complete_scan"], "scan_data": r["scan_data"], "username": re.search(r"(?<=\\Account\\)([^\\]+)", f["file_path"])[0]} for f in file_info for r in f["realm_last_complete_scan"]]
+    last_updates = [{"realm": r["realm"], "last_complete_scan": r["last_complete_scan"], "scan_data": r["scan_data"], "username": re.search(r"(?<=(?:\\|/)Account(?:\\|/))[^\\\/]+", f["file_path"])[0]} for f in file_info for r in f["realm_last_complete_scan"]]
     active_realms_unique = list(set([r["realm"] for r in last_updates]))
     latest_data = []
     for realm in active_realms_unique:
@@ -91,26 +130,20 @@ def get_latest_scans_per_realm_from_json_file():
 def get_tsm_auctiondb_lua_files(wtf_folder):
     logger.debug("Getting all lua files for all accounts")
     "Gets 'TradeSkillMaster_AuctionDB.lua' file paths for all accounts"
-    account_names = os.listdir(os.path.join(wtf_folder, "Account"))
+    account_names = [{"wtf": w, "account_name": a} for w in wtf_folder for a in os.listdir(os.path.join(w, "Account"))]
 
     found_file_path_list = []
-    file_path_list = []
     for account_name in account_names:
-        path = os.path.join(wtf_folder,
-                            "Account",
-                            account_name,
-                            "SavedVariables",
-                            "TradeSkillMaster_AuctionDB.lua")
-        file_path_list.append(path)
-        if os.path.isfile(path):
-            found_file_path_list.append(path)
+        saved_var_path = os.path.join(account_name["wtf"],
+                                     "Account",
+                                     account_name["account_name"],
+                                     "SavedVariables")
+        path = os.path.join(saved_var_path, "TradeSkillMaster_AuctionDB.lua")
+        if not os.path.isfile(path):
+            create_empty_auctiondb_lua_file(saved_var_path)
+        found_file_path_list.append(pathlib.Path(path).as_posix())
 
-    if found_file_path_list:
-        return found_file_path_list
-    else:
-        logger.critical(f"Couldn't find 'TradeSkillMaster_AuctionDB.lua' in any of the following locations: {str([redact_account_name_from_lua_file_path(f) for f in file_path_list])}. Check if TSM is installed and if so, run a scan first.")
-        input("Press Enter to close the console")
-        sys.exit()
+    return found_file_path_list
 
 def initiliaze_json():
     logger.info("It seems this is the first time using the app, here's what's going to happen:")
@@ -121,8 +154,7 @@ def initiliaze_json():
     logger.info(f"Initializing '{JSON_FILE_NAME}'")
     logger.info("Now the app will look for your WTF folder. If you installed Ascension in the default")
     logger.info("directory it will find it automatically. If not, you will be prompted to find it yourself.")
-    wtf_folder = get_wtf_folder()
-    logger.info(f"WTF folder found at: '{wtf_folder}'")
+    wtf_folder = list(get_wtf_folder())
     lua_file_paths = get_tsm_auctiondb_lua_files(wtf_folder)
     file_info = get_lua_file_path_info(lua_file_paths)
     latest_data = get_latest_scans_across_all_accounts_and_realms(file_info)

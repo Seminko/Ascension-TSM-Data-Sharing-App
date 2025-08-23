@@ -17,7 +17,6 @@ from messages import handle_messages
 import os
 import json
 import time
-import re
 import io
 import copy
 
@@ -37,7 +36,7 @@ def upload_data():
     full_file_info = None
     logger.debug("UPLOAD SECTION")
 
-    lua_file_paths, json_file = lua_json_helper.get_lua_file_paths()
+    lua_file_paths, json_file, msg = lua_json_helper.get_lua_file_paths(msg)
 
     files_new = []
     files_updated = []
@@ -55,7 +54,7 @@ def upload_data():
 
         if files_new:
             msg = generic_helper.clear_message(msg)
-            logger.info("UPLOAD SECTION - New LUA file(s) detected (probably a newly added account)")
+            logger.info("UPLOAD SECTION - New LUA file(s) detected (probably a newly added account or added PTR etc.)")
             file_info_new_files = [{"file_path": f["file_path"], "last_modified": f["last_modified"]} for f in full_file_info if f["file_path"] in files_new]
             json_file["file_info"].extend(file_info_new_files)
 
@@ -75,28 +74,25 @@ def upload_data():
                     updated_realms.append(la)
 
         if updated_realms:
-            dev_server_regex = r"(?i)\b(?:alpha|dev(?:elopment)?|ptr|qa|recording)\b"
-            updated_realms_to_send = [copy.deepcopy(r) for r in updated_realms if not re.search(dev_server_regex, r["realm"])]
-            if updated_realms_to_send:
-                msg = generic_helper.clear_message(msg)
-                logger.info("UPLOAD SECTION - New scan timestamp found for the following realms:")
-                logger.info(f"""'{"','".join(sorted([r['realm'] for r in updated_realms_to_send]))}'""")
-                for r in updated_realms_to_send:
-                    r["username"] = hash_username(r["username"])
+            updated_realms_to_send = [copy.deepcopy(r) for r in updated_realms]
+            updated_realms_to_send.sort(key=lambda x: x["realm"])
+            msg = generic_helper.clear_message(msg)
+            logger.info("UPLOAD SECTION - New scan timestamp found for the following realms:")
+            for r in updated_realms_to_send:
+                logger.info(f"""'{r['realm']}'""")
+                r["username"] = hash_username(r["username"])
 
-                data_to_send_json_string = json.dumps(updated_realms_to_send)
-                data_to_send_bytes = io.BytesIO(data_to_send_json_string.encode('utf-8'))
-                logger.debug("Sending data")
-                import_result = server_communication.send_data_to_server(data_to_send_bytes)
+            data_to_send_json_string = json.dumps(updated_realms_to_send)
+            data_to_send_bytes = io.BytesIO(data_to_send_json_string.encode('utf-8'))
+            logger.debug("Sending data")
+            import_result = server_communication.send_data_to_server(data_to_send_bytes)
 
-                if not import_result:
-                    logger.info(f"UPLOAD SECTION - Upload failed. Will retry next round. ({current_tries['upload_tries']}/{HTTP_TRY_CAP})")
-                    return ret, full_file_info
+            if not import_result:
+                logger.info(f"UPLOAD SECTION - Upload failed. Will retry next round. ({current_tries['upload_tries']}/{HTTP_TRY_CAP})")
+                return ret, full_file_info
 
-                logger.info("UPLOAD SECTION - " + import_result['message'])
-                ret = import_result['update_count']
-            else:
-                logger.debug("New scan timestamp found but only for Dev/PTR/QA etc servers, ignoring")
+            logger.info("UPLOAD SECTION - " + import_result['message'])
+            ret = import_result['update_count']
 
             """"
             -1 used to redownload anyways
@@ -140,10 +136,11 @@ def download_data(full_file_info):
             return ret
 
         ret = True
+        downloaded_data.sort(key=lambda x: x["realm"])
         logger.debug(f"""Downloaded newer data for the following realms: '{"','".join([realm["realm"] for realm in downloaded_data])}'""")
         json_file = lua_json_helper.read_json_file()
 
-        "When a realm is not downloaded, process it still so that it propages to other accounts (only if the last scan has been within the last 7 days)"
+        "When a realm is not downloaded, process it still so that it propagates to other accounts (only if the last scan has been within the last 7 days)"
         realms_not_downloaded = [realm for realm in json_file["latest_data"] if realm["realm"] not in [realm["realm"] for realm in downloaded_data] and realm["last_complete_scan"] >= (time.time() - 604800)]
         logger.debug(f"""Adding the following realms from local previous scans so to potentially propagate to other accounts: '{"','".join([realm["realm"] for realm in realms_not_downloaded])}'""")
         json_file, lua_file_paths, full_file_info = update_lua_files(full_file_info, downloaded_data+realms_not_downloaded)
@@ -157,7 +154,8 @@ def download_data(full_file_info):
 
         msg = generic_helper.clear_message(msg)
         logger.info("DOWNLOAD SECTION - LUA file(s) updated with data for the following realms:")
-        logger.info(f"""'{"','".join([realm["realm"] for realm in downloaded_data])}'""")
+        for realm in downloaded_data:
+            logger.info(f"""'{realm["realm"]}'""")
         logger.debug("Json data needs to be updated")
         for download_obj in downloaded_data:
             logger.debug(f"""Checking realm '{download_obj["realm"]}'""")
@@ -179,7 +177,7 @@ def download_data(full_file_info):
     return ret
 
 def update_lua_files(full_file_info, downloaded_data):
-    lua_file_paths, json_file = lua_json_helper.get_lua_file_paths()
+    lua_file_paths, json_file, _ = lua_json_helper.get_lua_file_paths()
     if not full_file_info:
         full_file_info = lua_json_helper.get_lua_file_path_info(lua_file_paths)
     for lua_file_path in lua_file_paths:
