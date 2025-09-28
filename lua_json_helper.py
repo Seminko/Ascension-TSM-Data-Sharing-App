@@ -43,7 +43,11 @@ def get_all_account_names(json_file, hashed=True):
 def get_last_complete_scan(lua_file_path):
     logger.debug(f"Getting last complete scans for '{redact_account_name_from_lua_file_path(lua_file_path)}'")
     with open(lua_file_path, "r") as outfile:
-        data = luadata_serialization.unserialize(outfile.read(), encoding="utf-8", multival=False)
+        lua_content = outfile.read()
+        if not validate_lua_db_is_acensions(lua_content):
+            logger.critical(f"'{lua_file_path}' was NOT created by the official Ascension TSM Addon hence skipping it. Download the official Ascension TSM addon from the launcher or from https://github.com/Ascension-Addons/TradeSkillMaster")
+            return None, None
+        data = luadata_serialization.unserialize(lua_content, encoding="utf-8", multival=False)
         realm_list = []
         if "realm" in data:
             for realm in {k:v for k, v in data["realm"].items() if "scanData" in data["realm"][k]}:
@@ -61,7 +65,11 @@ def get_lua_file_path_info(lua_file_paths):
         obj = {}
         obj["file_path"] = lua_file_path
         obj["last_modified"] = os.path.getmtime(lua_file_path)
-        obj["realm_last_complete_scan"], obj["full_data"] = get_last_complete_scan(lua_file_path)
+        realm_last_complete_scan, full_data = get_last_complete_scan(lua_file_path)
+        if realm_last_complete_scan is None or full_data is None:
+            continue
+        obj["realm_last_complete_scan"] = realm_last_complete_scan
+        obj["full_data"] = full_data
         file_updated_list.append(obj)
     return file_updated_list
 
@@ -157,6 +165,8 @@ def initiliaze_json():
     wtf_folder = list(get_wtf_folder())
     lua_file_paths = get_tsm_auctiondb_lua_files(wtf_folder)
     file_info = get_lua_file_path_info(lua_file_paths)
+    if not file_info:
+        raise ValueError("TSM DB LUA file was NOT created by the official Ascension TSM Addon. Download the official Ascension TSM addon from the launcher or from https://github.com/Ascension-Addons/TradeSkillMaster")
     latest_data = get_latest_scans_across_all_accounts_and_realms(file_info)
 
     logger.debug("Creating json file")
@@ -178,6 +188,13 @@ def read_json_file():
 
 def redact_account_name_from_lua_file_path(lua_file_path):
     return re.sub(r"(?<=(?:\\|/)Account(?:\\|/))[^\\\/]+", "{REDACTED}", lua_file_path)
+
+def validate_lua_db_is_acensions(lua_content):
+    regex = r"^(?:--\s*.*\s*)*\s*AscensionTSM_AuctionDB\s*=\s*{"
+    match = re.search(regex, lua_content)
+    if match:
+        return True
+    return False
 
 def write_json_file(json_object):
     logger.debug("Saving json file")

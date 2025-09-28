@@ -51,6 +51,8 @@ def upload_data():
 
     if files_new or files_updated:
         full_file_info = lua_json_helper.get_lua_file_path_info(lua_file_paths)
+        if not full_file_info:
+            raise ValueError("TSM DB LUA file was NOT created by the official Ascension TSM Addon. Download the official Ascension TSM addon from the launcher or from https://github.com/Ascension-Addons/TradeSkillMaster")
 
         if files_new:
             msg = generic_helper.clear_message(msg)
@@ -180,6 +182,8 @@ def update_lua_files(full_file_info, downloaded_data):
     lua_file_paths, json_file, _ = lua_json_helper.get_lua_file_paths()
     if not full_file_info:
         full_file_info = lua_json_helper.get_lua_file_path_info(lua_file_paths)
+        if not full_file_info:
+            raise ValueError("TSM DB LUA file was NOT created by the official Ascension TSM Addon. Download the official Ascension TSM addon from the launcher or from https://github.com/Ascension-Addons/TradeSkillMaster")
     for lua_file_path in lua_file_paths:
         need_to_update_lua_file = False
         data = next(f["full_data"] for f in full_file_info if f["file_path"] == lua_file_path)
