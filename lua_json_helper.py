@@ -44,7 +44,7 @@ def get_last_complete_scan(lua_file_path):
     logger.debug(f"Getting last complete scans for '{redact_account_name_from_lua_file_path(lua_file_path)}'")
     with open(lua_file_path, "r") as outfile:
         lua_content = outfile.read()
-        if not validate_lua_db_is_acensions(lua_content):
+        if not validate_lua_db_is_acension(lua_content):
             logger.critical(f"'{lua_file_path}' was NOT created by the official Ascension TSM Addon hence skipping it. Download the official Ascension TSM addon from the launcher or from https://github.com/Ascension-Addons/TradeSkillMaster")
             return None, None
         data = luadata_serialization.unserialize(lua_content, encoding="utf-8", multival=False)
@@ -189,7 +189,7 @@ def read_json_file():
 def redact_account_name_from_lua_file_path(lua_file_path):
     return re.sub(r"(?<=(?:\\|/)Account(?:\\|/))[^\\\/]+", "{REDACTED}", lua_file_path)
 
-def validate_lua_db_is_acensions(lua_content):
+def validate_lua_db_is_acension(lua_content):
     regex = r"^(?:--\s*.*\s*)*\s*AscensionTSM_AuctionDB\s*=\s*{"
     match = re.search(regex, lua_content)
     if match:
