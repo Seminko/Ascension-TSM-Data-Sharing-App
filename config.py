@@ -7,7 +7,7 @@ from urllib3.util.retry import Retry
 
 # %% FUNCTIONS
 
-VERSION = "1.4"
+VERSION = "1.5"
 
 if getattr(sys, 'frozen', False):
     # Running in PyInstaller executable
