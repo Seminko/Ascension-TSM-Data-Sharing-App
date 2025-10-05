@@ -143,7 +143,7 @@ def download_data(full_file_info):
         "When a realm is not downloaded, process it still so that it propagates to other accounts (only if the last scan has been within the last 7 days)"
         realms_not_downloaded = [realm for realm in json_file["latest_data"] if realm["realm"] not in [realm["realm"] for realm in downloaded_data] and realm["last_complete_scan"] >= (time.time() - 604800)]
         logger.debug(f"""Adding the following realms from local previous scans so to potentially propagate to other accounts: '{"','".join([realm["realm"] for realm in realms_not_downloaded])}'""")
-        json_file, lua_file_paths, full_file_info = update_lua_files(full_file_info, downloaded_data+realms_not_downloaded)
+        json_file, lua_file_paths, full_file_info, actually_updated_realms = update_lua_files(full_file_info, downloaded_data+realms_not_downloaded)
 
         hashed_account_names = lua_json_helper.get_all_account_names(json_file)
 
@@ -153,10 +153,10 @@ def download_data(full_file_info):
         logger.debug(f"Download stats: {import_result['message']}")
 
         msg = generic_helper.clear_message(msg)
-        if ret:
+        if ret and actually_updated_realms:
             logger.info("DOWNLOAD SECTION - LUA file(s) updated with data for the following realms:")
-            for realm in downloaded_data:
-                logger.info(f"""'{realm["realm"]}'""")
+            for realm in actually_updated_realms:
+                logger.info(f"'{realm}'")
         logger.debug("Json data needs to be updated")
         for download_obj in downloaded_data:
             logger.debug(f"""Checking realm '{download_obj["realm"]}'""")
@@ -178,6 +178,7 @@ def download_data(full_file_info):
     return ret
 
 def update_lua_files(full_file_info, downloaded_data):
+    actually_updated_realms = set()
     lua_file_paths, json_file, _ = lua_json_helper.get_lua_file_paths()
     if not full_file_info:
         full_file_info = lua_json_helper.get_lua_file_path_info(lua_file_paths)
@@ -206,6 +207,7 @@ def update_lua_files(full_file_info, downloaded_data):
                         logger.debug(f"""'{download_obj["realm"]}' in data['realm'], updating it""")
                         data["realm"][download_obj["realm"]]["lastCompleteScan"] = download_obj["last_complete_scan"]
                         data["realm"][download_obj["realm"]]["scanData"] = download_obj["scan_data"]
+                        actually_updated_realms.add(download_obj["realm"])
                         need_to_update_lua_file = True
                     else:
                         logger.debug(f"""'{download_obj["realm"]}' data is up-to-date, no need to rewrite it""")
@@ -216,6 +218,7 @@ def update_lua_files(full_file_info, downloaded_data):
                     data["realm"][download_obj["realm"]]["lastCompleteScan"] = download_obj["last_complete_scan"]
                     data["realm"][download_obj["realm"]]["lastScanSecondsPerPage"] = 0.5
                     data["realm"][download_obj["realm"]]["scanData"] = download_obj["scan_data"]
+                    actually_updated_realms.add(download_obj["realm"])
                     need_to_update_lua_file = True
             else:
                 logger.debug(f"""'realm' key not in data, adding it and setting up realm '{download_obj["realm"]}'""")
@@ -224,6 +227,7 @@ def update_lua_files(full_file_info, downloaded_data):
                 data["realm"][download_obj["realm"]]["lastCompleteScan"] = download_obj["last_complete_scan"]
                 data["realm"][download_obj["realm"]]["lastScanSecondsPerPage"] = 0.5
                 data["realm"][download_obj["realm"]]["scanData"] = download_obj["scan_data"]
+                actually_updated_realms.add(download_obj["realm"])
                 need_to_update_lua_file = True
 
         if need_to_update_lua_file:
@@ -232,7 +236,7 @@ def update_lua_files(full_file_info, downloaded_data):
             file_obj = next(f for f in json_file["file_info"] if f["file_path"] == lua_file_path)
             file_obj["last_modified"] = os.path.getmtime(lua_file_path)
 
-    return json_file, lua_file_paths, full_file_info
+    return json_file, lua_file_paths, full_file_info, actually_updated_realms
 
 # %% MAIN LOOP
 
