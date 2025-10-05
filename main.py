@@ -137,11 +137,15 @@ def download_data(full_file_info):
         else:
             ret = True
         downloaded_data.sort(key=lambda x: x["realm"])
+        for realm in downloaded_data:
+            realm["downloaded"] = True
         logger.debug(f"""Downloaded newer data for the following realms: '{"','".join([realm["realm"] for realm in downloaded_data])}'""")
         json_file = lua_json_helper.read_json_file()
 
         "When a realm is not downloaded, process it still so that it propagates to other accounts (only if the last scan has been within the last 7 days)"
         realms_not_downloaded = [realm for realm in json_file["latest_data"] if realm["realm"] not in [realm["realm"] for realm in downloaded_data] and realm["last_complete_scan"] >= (time.time() - 604800)]
+        for realm in realms_not_downloaded:
+            realm["downloaded"] = False
         logger.debug(f"""Adding the following realms from local previous scans so to potentially propagate to other accounts: '{"','".join([realm["realm"] for realm in realms_not_downloaded])}'""")
         json_file, lua_file_paths, full_file_info, actually_updated_realms = update_lua_files(full_file_info, downloaded_data+realms_not_downloaded)
 
@@ -184,11 +188,13 @@ def update_lua_files(full_file_info, downloaded_data):
         full_file_info = lua_json_helper.get_lua_file_path_info(lua_file_paths)
         if not full_file_info:
             raise ValueError("TSM DB LUA file was NOT created by the official Ascension TSM Addon. Download the official Ascension TSM addon from the launcher or from https://github.com/Ascension-Addons/TradeSkillMaster")
+    logger.debug(SEPARATOR)
     for lua_file_path in lua_file_paths:
         account_path = lua_file_path.replace("/SavedVariables/TradeSkillMaster_AuctionDB.lua", "")
         realms_used_under_account = [f for f in os.listdir(account_path) if os.path.isdir(os.path.join(account_path, f)) and f != "SavedVariables"]
         if not realms_used_under_account:
-            logger.debug("No realms found under '{lua_json_helper.redact_account_name_from_lua_file_path(account_path)}'. Nothing to update")
+            logger.debug(f"No realms found under '{lua_json_helper.redact_account_name_from_lua_file_path(account_path)}'. Nothing to update")
+            logger.debug(SEPARATOR)
             continue
         logger.debug(f"Only the following realms found under '{lua_json_helper.redact_account_name_from_lua_file_path(account_path)}': {','.join(realms_used_under_account)}. Downloaded realms not under this account are skipped")
 
@@ -196,14 +202,18 @@ def update_lua_files(full_file_info, downloaded_data):
         data = next(f["full_data"] for f in full_file_info if f["file_path"] == lua_file_path)
         logger.debug(f"Processing '{lua_json_helper.redact_account_name_from_lua_file_path(lua_file_path)}'")
         for download_obj in [d for d in downloaded_data if d["realm"] in realms_used_under_account]:
-            logger.debug(f"""Processing '{download_obj["realm"]}'""")
+            logger.debug(f"""Processing '{download_obj["realm"]}' - source: {"downloaded" if download_obj["downloaded"] else "existing - proliferation"}""")
             if "realm" in data:
                 if not data["realm"] and isinstance(data["realm"], list):
                     logger.debug("data['realm'] is empty list")
                     data["realm"] = {}
 
                 if download_obj["realm"] in data["realm"]:
-                    if data["realm"][download_obj["realm"]]["lastCompleteScan"] <= download_obj["last_complete_scan"]:
+                    if (
+                        data["realm"][download_obj["realm"]]["lastCompleteScan"] <= download_obj["last_complete_scan"]
+                        if download_obj["downloaded"]
+                        else data["realm"][download_obj["realm"]]["lastCompleteScan"] < download_obj["last_complete_scan"]
+                    ):
                         logger.debug(f"""'{download_obj["realm"]}' in data['realm'], updating it""")
                         data["realm"][download_obj["realm"]]["lastCompleteScan"] = download_obj["last_complete_scan"]
                         data["realm"][download_obj["realm"]]["scanData"] = download_obj["scan_data"]
@@ -229,12 +239,17 @@ def update_lua_files(full_file_info, downloaded_data):
                 data["realm"][download_obj["realm"]]["scanData"] = download_obj["scan_data"]
                 actually_updated_realms.add(download_obj["realm"])
                 need_to_update_lua_file = True
+        
+        realms_not_used = [d["realm"] for d in downloaded_data if d["realm"] not in realms_used_under_account]
+        logger.debug(f"The following realms were skipped for this account: {','.join(realms_not_used)} because the user does not play them under this account")
 
         if need_to_update_lua_file:
             prefix = f"""-- Updated by {APP_NAME} ({GITHUB_REPO_URL})\nAscensionTSM_AuctionDB = """
             luadata_serialization.write(lua_file_path, data, encoding="utf-8", indent="\t", prefix=prefix)
             file_obj = next(f for f in json_file["file_info"] if f["file_path"] == lua_file_path)
             file_obj["last_modified"] = os.path.getmtime(lua_file_path)
+            
+        logger.debug(SEPARATOR)
 
     return json_file, lua_file_paths, full_file_info, actually_updated_realms
 
