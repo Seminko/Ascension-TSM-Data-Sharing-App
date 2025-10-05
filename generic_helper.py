@@ -27,6 +27,11 @@ def app_start_logging():
     logger.info(MAIN_SEPARATOR)
     logger.info("Make sure you have Windows notifications enabled (check GitHub FAQ).")
     logger.info("DON'T TOUCH 'update_times.json'! YOU'LL BREAK SOMETHING.")
+    logger.info(SEPARATOR)
+    logger.info("Only realms that you actually play on will get updated with new AH data.")
+    logger.info("However, members of the community, like you, scan all Ascension realms (even PTR),")
+    logger.info("so once you start playing a new realm, its latest data will get downloaded automatically.")
+    logger.info(SEPARATOR)
     logger.info("DON'T BE A SCRUB, UPLOAD FREQUENTLY.")
     logger.info(SEPARATOR)
 
