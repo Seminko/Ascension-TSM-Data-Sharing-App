@@ -187,7 +187,12 @@ def read_json_file():
         return json_object
 
 def redact_account_name_from_lua_file_path(lua_file_path):
-    return re.sub(r"(?<=(?:\\|/)Account(?:\\|/))[^\\\/]+", "{REDACTED}", lua_file_path)
+    def mask_middle(match):
+        middle = match.group(1)
+        return '*' * len(middle)
+    pattern = r"(?<=(?:\\|/)Account(?:\\|/)\w)([^\\\/]+)(?=\w)"
+    masked = re.sub(pattern, mask_middle, lua_file_path)
+    return masked
 
 def validate_lua_db_is_acension(lua_content):
     regex = r"^(?:--\s*.*\s*)*\s*AscensionTSM_AuctionDB\s*=\s*{"
