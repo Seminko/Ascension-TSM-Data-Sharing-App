@@ -138,7 +138,7 @@ def get_latest_scans_per_realm_from_json_file():
 def get_tsm_auctiondb_lua_files(wtf_folder):
     logger.debug("Getting all lua files for all accounts")
     "Gets 'TradeSkillMaster_AuctionDB.lua' file paths for all accounts"
-    account_names = [{"wtf": w, "account_name": a} for w in wtf_folder for a in os.listdir(os.path.join(w, "Account"))]
+    account_names = [{"wtf": w, "account_name": a} for w in wtf_folder for a in os.listdir(os.path.join(w, "Account")) if os.path.isdir(os.path.join(w, "Account", a))]
 
     found_file_path_list = []
     for account_name in account_names:
