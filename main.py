@@ -96,7 +96,7 @@ def upload_data():
             logger.info("UPLOAD SECTION - " + import_result['message'])
             ret = import_result['update_count']
 
-            """"
+            """
             -1 used to redownload anyways
             what can happen is that your data is a year old and you scan
             a single item, the lastCompleteScan will still show now() time and
