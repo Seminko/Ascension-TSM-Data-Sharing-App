@@ -134,8 +134,6 @@ def download_data(full_file_info):
             logger.debug(f"Download failed. Will retry next round. ({current_tries['download_tries']}/{HTTP_TRY_CAP})")
         elif len(downloaded_data) == 0:
             logger.debug("LUA file(s) are up-to-date for all realms")
-        else:
-            ret = True
         downloaded_data.sort(key=lambda x: x["realm"])
         for realm in downloaded_data:
             realm["downloaded"] = True
@@ -157,7 +155,8 @@ def download_data(full_file_info):
         logger.debug(f"Download stats: {import_result['message']}")
 
         msg = generic_helper.clear_message(msg)
-        if ret and actually_updated_realms:
+        if actually_updated_realms:
+            ret = True
             logger.info("DOWNLOAD SECTION - LUA file(s) updated with data for the following realms:")
             for realm in actually_updated_realms:
                 logger.info(f"'{realm}'")
@@ -217,7 +216,8 @@ def update_lua_files(full_file_info, downloaded_data):
                         logger.debug(f"""'{download_obj["realm"]}' in data['realm'], updating it""")
                         data["realm"][download_obj["realm"]]["lastCompleteScan"] = download_obj["last_complete_scan"]
                         data["realm"][download_obj["realm"]]["scanData"] = download_obj["scan_data"]
-                        actually_updated_realms.add(download_obj["realm"])
+                        if download_obj["downloaded"]:
+                            actually_updated_realms.add(download_obj["realm"])
                         need_to_update_lua_file = True
                     else:
                         logger.debug(f"""'{download_obj["realm"]}' data is up-to-date, no need to rewrite it""")
@@ -228,7 +228,8 @@ def update_lua_files(full_file_info, downloaded_data):
                     data["realm"][download_obj["realm"]]["lastCompleteScan"] = download_obj["last_complete_scan"]
                     data["realm"][download_obj["realm"]]["lastScanSecondsPerPage"] = 0.5
                     data["realm"][download_obj["realm"]]["scanData"] = download_obj["scan_data"]
-                    actually_updated_realms.add(download_obj["realm"])
+                    if download_obj["downloaded"]:
+                        actually_updated_realms.add(download_obj["realm"])
                     need_to_update_lua_file = True
             else:
                 logger.debug(f"""'realm' key not in data, adding it and setting up realm '{download_obj["realm"]}'""")
@@ -237,7 +238,8 @@ def update_lua_files(full_file_info, downloaded_data):
                 data["realm"][download_obj["realm"]]["lastCompleteScan"] = download_obj["last_complete_scan"]
                 data["realm"][download_obj["realm"]]["lastScanSecondsPerPage"] = 0.5
                 data["realm"][download_obj["realm"]]["scanData"] = download_obj["scan_data"]
-                actually_updated_realms.add(download_obj["realm"])
+                if download_obj["downloaded"]:
+                    actually_updated_realms.add(download_obj["realm"])
                 need_to_update_lua_file = True
         
         realms_not_used = [d["realm"] for d in downloaded_data if d["realm"] not in realms_used_under_account]
