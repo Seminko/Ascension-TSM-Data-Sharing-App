@@ -91,6 +91,7 @@ def upload_data():
 
             if not import_result:
                 logger.info(f"UPLOAD SECTION - Upload failed. Will retry next round. ({current_tries['upload_tries']}/{HTTP_TRY_CAP})")
+                logger.info(SEPARATOR)
                 return ret, full_file_info
 
             logger.info("UPLOAD SECTION - " + import_result['message'])
