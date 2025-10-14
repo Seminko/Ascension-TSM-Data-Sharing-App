@@ -84,10 +84,10 @@ def upload_data():
                 logger.info(f"""'{r['realm']}'""")
                 r["username"] = hash_username(r["username"])
 
-            data_to_send_json_string = json.dumps(updated_realms_to_send)
-            data_to_send_bytes = io.BytesIO(data_to_send_json_string.encode('utf-8'))
+            # data_to_send_json_string = json.dumps(updated_realms_to_send)
+            # data_to_send_bytes = io.BytesIO(data_to_send_json_string.encode('utf-8'))
             logger.debug("Sending data")
-            import_result = server_communication.send_data_to_server(data_to_send_bytes)
+            import_result = server_communication.send_data_to_server(updated_realms_to_send)
 
             if not import_result:
                 logger.info(f"UPLOAD SECTION - Upload failed. Will retry next round. ({current_tries['upload_tries']}/{HTTP_TRY_CAP})")
