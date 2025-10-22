@@ -7,7 +7,7 @@ from urllib3.util.retry import Retry
 
 # %% FUNCTIONS
 
-VERSION = "1.4"
+VERSION = "1.5"
 
 if getattr(sys, 'frozen', False):
     # Running in PyInstaller executable
@@ -71,3 +71,5 @@ GITHUB_REPO_URL = "https://github.com/Seminko/Ascension-TSM-Data-Sharing-App"
 DISCORD_INVITE_LINK = "https://discord.gg/uTxuDvuHcn"
 
 LOADING_CHARS = ["[   ]","[=  ]","[== ]","[===]","[ ==]","[  =]"]
+
+LUAS_WITH_WRONG_VERSION = set()

@@ -40,11 +40,11 @@ def get_possible_paths():
         possible_paths.append(os.path.join(drive, "Games", "Ascension Launcher", "resources", "ascension_ptr", "WTF", "Account"))
         possible_paths.append(os.path.join(drive, "Ascension Launcher", "resources", "ascension_ptr", "WTF", "Account"))
         
-        # "Project Epoch"
-        # possible_paths.append(os.path.join(drive, "Program Files", "Ascension Launcher", "resources", "epoch_live", "WTF", "Account"))
-        # possible_paths.append(os.path.join(drive, "Program Files (x86)", "Ascension Launcher", "resources", "epoch_live", "WTF", "Account"))
-        # possible_paths.append(os.path.join(drive, "Games", "Ascension Launcher", "resources", "epoch_live", "WTF", "Account"))
-        # possible_paths.append(os.path.join(drive, "Ascension Launcher", "resources", "epoch_live", "WTF", "Account"))
+        "Project Epoch"
+        possible_paths.append(os.path.join(drive, "Program Files", "Ascension Launcher", "resources", "epoch_live", "WTF", "Account"))
+        possible_paths.append(os.path.join(drive, "Program Files (x86)", "Ascension Launcher", "resources", "epoch_live", "WTF", "Account"))
+        possible_paths.append(os.path.join(drive, "Games", "Ascension Launcher", "resources", "epoch_live", "WTF", "Account"))
+        possible_paths.append(os.path.join(drive, "Ascension Launcher", "resources", "epoch_live", "WTF", "Account"))
         
         
     # # LINUX IS UNTESTED
@@ -83,11 +83,7 @@ def get_wtf_folder(wtf_folders=set()):
         logger.info("MAKE SURE the WTF folder contains Account sub-directory. If not, it is not the correct folder!")
     while True:
         folder_selected_path = asyncio.run(select_folder())
-        if "epoch" in folder_selected_path.lower():
-            logger.warn("Project Epoch is not supported at this time - Ascension TSM doesn't work there.")
-            if not prompt_yes_no("Would you like to select another?"):
-                break
-        elif folder_selected_path.endswith(r"/WTF"):
+        if folder_selected_path.endswith(r"/WTF"):
             if os.path.isdir(os.path.join(folder_selected_path, "Account")):
                 wtf_folders.add(folder_selected_path)
                 logger.info(f"Selected: {folder_selected_path}")

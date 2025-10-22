@@ -6,8 +6,7 @@ from get_wtf_folder import get_wtf_folder
 from hash_username import hash_username
 from task_scheduler import create_task_from_xml
 from generic_helper import write_to_json, clear_message
-from config import SCRIPT_DIR, SEPARATOR, JSON_FILE_NAME,\
-    EXE_PATH, XML_TASK_DEFINITION_PATH, JSON_PATH, APP_NAME_WITHOUT_VERSION
+import config
 
 # %% MODULE IMPORTS
 
@@ -43,7 +42,10 @@ def get_all_account_names(json_file, hashed=True):
 def get_last_complete_scan(lua_file_path):
     logger.debug(f"Getting last complete scans for '{redact_account_name_from_lua_file_path(lua_file_path)}'")
     with open(lua_file_path, "r") as outfile:
-        data = luadata_serialization.unserialize(outfile.read(), encoding="utf-8", multival=False)
+        lua_content = outfile.read()
+        if not validate_lua_db_is_acension(lua_content):
+            return None, None
+        data = luadata_serialization.unserialize(lua_content, encoding="utf-8", multival=False)
         realm_list = []
         if "realm" in data:
             for realm in {k:v for k, v in data["realm"].items() if "scanData" in data["realm"][k]}:
@@ -54,16 +56,34 @@ def get_last_complete_scan(lua_file_path):
                 realm_list.append(obj)
         return realm_list, data
 
-def get_lua_file_path_info(lua_file_paths):
+def get_lua_file_path_info(lua_file_paths, msg=""):
     file_updated_list = []
+    luas_with_wrong_version = set()
     for lua_file_path in lua_file_paths:
         logger.debug(f"Getting lua file path info for '{redact_account_name_from_lua_file_path(lua_file_path)}'")
         obj = {}
         obj["file_path"] = lua_file_path
         obj["last_modified"] = os.path.getmtime(lua_file_path)
-        obj["realm_last_complete_scan"], obj["full_data"] = get_last_complete_scan(lua_file_path)
+        realm_last_complete_scan, full_data = get_last_complete_scan(lua_file_path)
+        if realm_last_complete_scan is None or full_data is None:
+            luas_with_wrong_version.add(lua_file_path)
+            continue
+        obj["realm_last_complete_scan"] = realm_last_complete_scan
+        obj["full_data"] = full_data
         file_updated_list.append(obj)
-    return file_updated_list
+    
+    new_luas_with_wrong_version = luas_with_wrong_version - config.LUAS_WITH_WRONG_VERSION
+    if new_luas_with_wrong_version:
+        msg = clear_message(msg)
+        logger.info(config.SEPARATOR)
+        logger.critical("The following LUA file was NOT created by the official Ascension TSM Addon, skipping it.")
+        for lua_file_path in new_luas_with_wrong_version:
+            logger.critical(f'{lua_file_path}')
+            config.LUAS_WITH_WRONG_VERSION.add(lua_file_path)
+        logger.critical("Download the official Ascension TSM addon from the launcher")
+        logger.critical("or from https://github.com/Ascension-Addons/TradeSkillMaster.")
+        logger.info(config.SEPARATOR)
+    return file_updated_list, msg
 
 def get_lua_file_paths(msg=""):
     json_file = read_json_file()
@@ -96,7 +116,7 @@ def get_lua_file_paths(msg=""):
         write_json_file(json_file)
         wtf_folder = json_file["wtf_path"]
         
-        logger.info(SEPARATOR)
+        logger.info(config.SEPARATOR)
         
     wtf_folder = set(wtf_folder)
     lua_file_paths = get_tsm_auctiondb_lua_files(wtf_folder)
@@ -105,7 +125,7 @@ def get_lua_file_paths(msg=""):
 
 def json_file_initialized():
     logger.debug("Checking if json file is initialized")
-    if next((f for f in os.listdir() if f == JSON_FILE_NAME), None):
+    if next((f for f in os.listdir() if f == config.JSON_FILE_NAME), None):
         return True
     return False
 
@@ -130,7 +150,7 @@ def get_latest_scans_per_realm_from_json_file():
 def get_tsm_auctiondb_lua_files(wtf_folder):
     logger.debug("Getting all lua files for all accounts")
     "Gets 'TradeSkillMaster_AuctionDB.lua' file paths for all accounts"
-    account_names = [{"wtf": w, "account_name": a} for w in wtf_folder for a in os.listdir(os.path.join(w, "Account"))]
+    account_names = [{"wtf": w, "account_name": a} for w in wtf_folder for a in os.listdir(os.path.join(w, "Account")) if os.path.isdir(os.path.join(w, "Account", a))]
 
     found_file_path_list = []
     for account_name in account_names:
@@ -149,14 +169,16 @@ def initiliaze_json():
     logger.info("It seems this is the first time using the app, here's what's going to happen:")
     logger.info("First you will be asked whether you want to create a startup task. This will make sure")
     logger.info("the app runs automatically when you turn on your PC and starts downloading latest data.")
-    create_task_from_xml(task_name=APP_NAME_WITHOUT_VERSION, exe_path=EXE_PATH, working_directory=SCRIPT_DIR, xml_path=XML_TASK_DEFINITION_PATH)
-    logger.info(SEPARATOR)
-    logger.info(f"Initializing '{JSON_FILE_NAME}'")
+    create_task_from_xml(task_name=config.APP_NAME_WITHOUT_VERSION, exe_path=config.EXE_PATH, working_directory=config.SCRIPT_DIR, xml_path=config.XML_TASK_DEFINITION_PATH)
+    logger.info(config.SEPARATOR)
+    logger.info(f"Initializing '{config.JSON_FILE_NAME}'")
     logger.info("Now the app will look for your WTF folder. If you installed Ascension in the default")
     logger.info("directory it will find it automatically. If not, you will be prompted to find it yourself.")
     wtf_folder = list(get_wtf_folder())
     lua_file_paths = get_tsm_auctiondb_lua_files(wtf_folder)
-    file_info = get_lua_file_path_info(lua_file_paths)
+    file_info, _ = get_lua_file_path_info(lua_file_paths)
+    if not file_info:
+        raise ValueError("TSM DB LUA file was NOT created by the official Ascension TSM Addon. Download the official Ascension TSM addon from the launcher or from https://github.com/Ascension-Addons/TradeSkillMaster")
     latest_data = get_latest_scans_across_all_accounts_and_realms(file_info)
 
     logger.debug("Creating json file")
@@ -165,20 +187,32 @@ def initiliaze_json():
     obj["file_info"] = [{"file_path": f["file_path"], "last_modified": f["last_modified"]} for f in file_info]
     obj["latest_data"] = latest_data
     write_json_file(obj)
-    logger.info(SEPARATOR)
+    logger.info(config.SEPARATOR)
     logger.info("Now you will be prompted to link your account(s) to a Discord User ID / Nickname")
     logger.info("After this the app will ONLY mention successful uploads / downloads")
-    logger.info(SEPARATOR)
+    logger.info(config.SEPARATOR)
 
 def read_json_file():
     logger.debug("Reading json file")
-    with open(JSON_PATH, "r") as outfile:
+    with open(config.JSON_PATH, "r") as outfile:
         json_object = json.loads(outfile.read())
         return json_object
 
 def redact_account_name_from_lua_file_path(lua_file_path):
-    return re.sub(r"(?<=(?:\\|/)Account(?:\\|/))[^\\\/]+", "{REDACTED}", lua_file_path)
+    def mask_middle(match):
+        middle = match.group(1)
+        return '*' * len(middle)
+    pattern = r"(?<=(?:\\|/)Account(?:\\|/)\w)([^\\\/]+)(?=\w)"
+    masked = re.sub(pattern, mask_middle, lua_file_path)
+    return masked
+
+def validate_lua_db_is_acension(lua_content):
+    regex = r"^(?:--\s*.*\s*)*\s*AscensionTSM_AuctionDB\s*=\s*{"
+    match = re.search(regex, lua_content)
+    if match:
+        return True
+    return False
 
 def write_json_file(json_object):
     logger.debug("Saving json file")
-    write_to_json(JSON_PATH, json_object)
+    write_to_json(config.JSON_PATH, json_object)

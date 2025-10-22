@@ -53,6 +53,10 @@ def check_discord_id_nickname(notification=False, console_msg=""):
             logger.debug("Account list changed")
             discord_id_nickname_str = get_discord_id_nickname_from_file()
             discord_id_nickname_dict = parse_discord_id_nickname_str_to_dict(discord_id_nickname_str)
+            
+            account_to_remove_from_discord_nickname_json = get_removed_accounts(json_file)
+            if account_to_remove_from_discord_nickname_json:
+                discord_id_nickname_dict = remove_accounts_from_discord_id_nickname_dict(discord_id_nickname_dict, account_to_remove_from_discord_nickname_json)
 
             if discord_id_nickname_dict is None:
                 console_msg = clear_message(console_msg)
@@ -115,6 +119,15 @@ def get_newly_added_accounts(json_file):
     if "username_last_value" in json_file:
         return list(set(lua_json_helper.get_all_account_names(json_file, hashed=False)) - set(json_file["username_last_value"].keys()))
     return lua_json_helper.get_all_account_names(json_file, hashed=False)
+
+def get_removed_accounts(json_file):
+    if "username_last_value" in json_file:
+        current_accounts = set(lua_json_helper.get_all_account_names(json_file, hashed=False))
+        current_accounts_in_json_file = set(json_file["username_last_value"].keys())
+        if len(current_accounts) < len(current_accounts_in_json_file):
+            account_to_remove_from_discord_nickname_json = list(current_accounts_in_json_file - current_accounts)
+            return account_to_remove_from_discord_nickname_json
+    return []
 
 def get_user_id_initial(unhashed_account_names, ):
     while True:
@@ -200,6 +213,9 @@ def prompt_for_nickname():
             return nickname
         else:
             logger.info("Invalid nickname. Please try again.")
+            
+def remove_accounts_from_discord_id_nickname_dict(discord_id_nickname_dict, account_to_remove_from_discord_nickname_json):
+    return {key: value for key, value in discord_id_nickname_dict.items() if key not in account_to_remove_from_discord_nickname_json}
 
 def set_discord_id_nickname_to_main_json_file(json_file, discord_id_nickname_dict):
     json_file["username_last_modified"] = os.path.getmtime(NICKNAME_FILE_NAME_PATH)

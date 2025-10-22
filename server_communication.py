@@ -98,7 +98,7 @@ def make_http_request(purpose, data_to_send=None):
         fail_debug_log = "Sending to DB failed"
         current_tries_key = "upload_tries"
         url = get_endpoints.get_upload_endpoint()
-        request_eval_str = f"session.post('{url}', data=generate_chunks(data_to_send), timeout={REQUEST_TIMEOUT}, stream=True)"
+        request_eval_str = f"session.post('{url}', json=data_to_send, timeout={REQUEST_TIMEOUT}, stream=True)"
     elif purpose == "get_data_from_server":
         init_debug_log = "Downloading data from server"
         fail_debug_log = "Downloading from DB failed"
@@ -145,7 +145,7 @@ def make_http_request(purpose, data_to_send=None):
             response.raise_for_status()
             response_json = response.json()
     except Exception as e:
-        logger.debug(fail_debug_log)
+        logger.debug(f"{fail_debug_log}, exception: {str(repr(e))}")
         current_tries[current_tries_key] += 1
         if current_tries[current_tries_key] > HTTP_TRY_CAP:
             raise type(e)(get_endpoints.remove_endpoint_from_str(e)) from None
