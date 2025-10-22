@@ -71,3 +71,5 @@ GITHUB_REPO_URL = "https://github.com/Seminko/Ascension-TSM-Data-Sharing-App"
 DISCORD_INVITE_LINK = "https://discord.gg/uTxuDvuHcn"
 
 LOADING_CHARS = ["[   ]","[=  ]","[== ]","[===]","[ ==]","[  =]"]
+
+LUAS_WITH_WRONG_VERSION = set()

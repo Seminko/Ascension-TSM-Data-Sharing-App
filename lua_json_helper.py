@@ -45,7 +45,6 @@ def get_last_complete_scan(lua_file_path):
     with open(lua_file_path, "r") as outfile:
         lua_content = outfile.read()
         if not validate_lua_db_is_acension(lua_content):
-            logger.critical(f"'{lua_file_path}' was NOT created by the official Ascension TSM Addon hence skipping it. Download the official Ascension TSM addon from the launcher or from https://github.com/Ascension-Addons/TradeSkillMaster")
             return None, None
         data = luadata_serialization.unserialize(lua_content, encoding="utf-8", multival=False)
         realm_list = []
@@ -58,8 +57,9 @@ def get_last_complete_scan(lua_file_path):
                 realm_list.append(obj)
         return realm_list, data
 
-def get_lua_file_path_info(lua_file_paths):
+def get_lua_file_path_info(lua_file_paths, msg=""):
     file_updated_list = []
+    luas_with_wrong_version = set()
     for lua_file_path in lua_file_paths:
         logger.debug(f"Getting lua file path info for '{redact_account_name_from_lua_file_path(lua_file_path)}'")
         obj = {}
@@ -67,11 +67,24 @@ def get_lua_file_path_info(lua_file_paths):
         obj["last_modified"] = os.path.getmtime(lua_file_path)
         realm_last_complete_scan, full_data = get_last_complete_scan(lua_file_path)
         if realm_last_complete_scan is None or full_data is None:
+            luas_with_wrong_version.add(lua_file_path)
             continue
         obj["realm_last_complete_scan"] = realm_last_complete_scan
         obj["full_data"] = full_data
         file_updated_list.append(obj)
-    return file_updated_list
+    
+    new_luas_with_wrong_version = luas_with_wrong_version - config.LUAS_WITH_WRONG_VERSION
+    if new_luas_with_wrong_version:
+        msg = clear_message(msg)
+        logger.info(config.SEPARATOR)
+        logger.critical("The following LUA file was NOT created by the official Ascension TSM Addon, skipping it.")
+        for lua_file_path in new_luas_with_wrong_version:
+            logger.critical(f'{lua_file_path}')
+            config.LUAS_WITH_WRONG_VERSION.add(lua_file_path)
+        logger.critical("Download the official Ascension TSM addon from the launcher")
+        logger.critical("or from https://github.com/Ascension-Addons/TradeSkillMaster.")
+        logger.info(config.SEPARATOR)
+    return file_updated_list, msg
 
 def get_lua_file_paths(msg=""):
     json_file = read_json_file()
@@ -164,7 +177,7 @@ def initiliaze_json():
     logger.info("directory it will find it automatically. If not, you will be prompted to find it yourself.")
     wtf_folder = list(get_wtf_folder())
     lua_file_paths = get_tsm_auctiondb_lua_files(wtf_folder)
-    file_info = get_lua_file_path_info(lua_file_paths)
+    file_info, _ = get_lua_file_path_info(lua_file_paths)
     if not file_info:
         raise ValueError("TSM DB LUA file was NOT created by the official Ascension TSM Addon. Download the official Ascension TSM addon from the launcher or from https://github.com/Ascension-Addons/TradeSkillMaster")
     latest_data = get_latest_scans_across_all_accounts_and_realms(file_info)

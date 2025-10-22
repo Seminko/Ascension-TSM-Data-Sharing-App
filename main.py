@@ -50,7 +50,7 @@ def upload_data():
             files_updated.append(obj)
 
     if files_new or files_updated:
-        full_file_info = lua_json_helper.get_lua_file_path_info(lua_file_paths)
+        full_file_info, msg = lua_json_helper.get_lua_file_path_info(lua_file_paths)
         if not full_file_info:
             raise ValueError("TSM DB LUA file was NOT created by the official Ascension TSM Addon. Download the official Ascension TSM addon from the launcher or from https://github.com/Ascension-Addons/TradeSkillMaster")
 
@@ -182,10 +182,11 @@ def download_data(full_file_info):
     return ret
 
 def update_lua_files(full_file_info, downloaded_data):
+    global msg
     actually_updated_realms = set()
     lua_file_paths, json_file, _ = lua_json_helper.get_lua_file_paths()
     if not full_file_info:
-        full_file_info = lua_json_helper.get_lua_file_path_info(lua_file_paths)
+        full_file_info, msg = lua_json_helper.get_lua_file_path_info(lua_file_paths)
         if not full_file_info:
             raise ValueError("TSM DB LUA file was NOT created by the official Ascension TSM Addon. Download the official Ascension TSM addon from the launcher or from https://github.com/Ascension-Addons/TradeSkillMaster")
     logger.debug(SEPARATOR)
@@ -199,7 +200,10 @@ def update_lua_files(full_file_info, downloaded_data):
         logger.debug(f"Only the following realms found under '{lua_json_helper.redact_account_name_from_lua_file_path(account_path)}': {','.join(realms_used_under_account)}. Downloaded realms not under this account are skipped")
 
         need_to_update_lua_file = False
-        data = next(f["full_data"] for f in full_file_info if f["file_path"] == lua_file_path)
+        data = next((f["full_data"] for f in full_file_info if f["file_path"] == lua_file_path), None)
+        if data is None:
+            logger.debug("data is None, probably because of unsupported non-ascension LUAs? Continuing...")
+            continue
         logger.debug(f"Processing '{lua_json_helper.redact_account_name_from_lua_file_path(lua_file_path)}'")
         for download_obj in [d for d in downloaded_data if d["realm"] in realms_used_under_account]:
             logger.debug(f"""Processing '{download_obj["realm"]}' - source: {"downloaded" if download_obj["downloaded"] else "existing - proliferation"}""")
