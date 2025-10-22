@@ -6,8 +6,7 @@ from get_wtf_folder import get_wtf_folder
 from hash_username import hash_username
 from task_scheduler import create_task_from_xml
 from generic_helper import write_to_json, clear_message
-from config import SCRIPT_DIR, SEPARATOR, JSON_FILE_NAME,\
-    EXE_PATH, XML_TASK_DEFINITION_PATH, JSON_PATH, APP_NAME_WITHOUT_VERSION
+import config
 
 # %% MODULE IMPORTS
 
@@ -117,7 +116,7 @@ def get_lua_file_paths(msg=""):
         write_json_file(json_file)
         wtf_folder = json_file["wtf_path"]
         
-        logger.info(SEPARATOR)
+        logger.info(config.SEPARATOR)
         
     wtf_folder = set(wtf_folder)
     lua_file_paths = get_tsm_auctiondb_lua_files(wtf_folder)
@@ -126,7 +125,7 @@ def get_lua_file_paths(msg=""):
 
 def json_file_initialized():
     logger.debug("Checking if json file is initialized")
-    if next((f for f in os.listdir() if f == JSON_FILE_NAME), None):
+    if next((f for f in os.listdir() if f == config.JSON_FILE_NAME), None):
         return True
     return False
 
@@ -170,9 +169,9 @@ def initiliaze_json():
     logger.info("It seems this is the first time using the app, here's what's going to happen:")
     logger.info("First you will be asked whether you want to create a startup task. This will make sure")
     logger.info("the app runs automatically when you turn on your PC and starts downloading latest data.")
-    create_task_from_xml(task_name=APP_NAME_WITHOUT_VERSION, exe_path=EXE_PATH, working_directory=SCRIPT_DIR, xml_path=XML_TASK_DEFINITION_PATH)
-    logger.info(SEPARATOR)
-    logger.info(f"Initializing '{JSON_FILE_NAME}'")
+    create_task_from_xml(task_name=config.APP_NAME_WITHOUT_VERSION, exe_path=config.EXE_PATH, working_directory=config.SCRIPT_DIR, xml_path=config.XML_TASK_DEFINITION_PATH)
+    logger.info(config.SEPARATOR)
+    logger.info(f"Initializing '{config.JSON_FILE_NAME}'")
     logger.info("Now the app will look for your WTF folder. If you installed Ascension in the default")
     logger.info("directory it will find it automatically. If not, you will be prompted to find it yourself.")
     wtf_folder = list(get_wtf_folder())
@@ -188,14 +187,14 @@ def initiliaze_json():
     obj["file_info"] = [{"file_path": f["file_path"], "last_modified": f["last_modified"]} for f in file_info]
     obj["latest_data"] = latest_data
     write_json_file(obj)
-    logger.info(SEPARATOR)
+    logger.info(config.SEPARATOR)
     logger.info("Now you will be prompted to link your account(s) to a Discord User ID / Nickname")
     logger.info("After this the app will ONLY mention successful uploads / downloads")
-    logger.info(SEPARATOR)
+    logger.info(config.SEPARATOR)
 
 def read_json_file():
     logger.debug("Reading json file")
-    with open(JSON_PATH, "r") as outfile:
+    with open(config.JSON_PATH, "r") as outfile:
         json_object = json.loads(outfile.read())
         return json_object
 
@@ -216,4 +215,4 @@ def validate_lua_db_is_acension(lua_content):
 
 def write_json_file(json_object):
     logger.debug("Saving json file")
-    write_to_json(JSON_PATH, json_object)
+    write_to_json(config.JSON_PATH, json_object)
