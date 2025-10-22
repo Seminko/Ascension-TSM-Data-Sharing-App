@@ -34,6 +34,8 @@ There are two core functionalities:<br>
   - When you do a scan, could be partial or full, please do a /reload when you can. This will make the game write to the LUA file, get detected by the app and uploaded to the DB.
   - The script checks for changes every 5 minutes.
 
+BTW, the app runs in command line. When you run Ascension TSM Data Sharing App.exe it opens the console and starts working right away, ie there is no install.
+
 &nbsp;
 
 > [!WARNING]
