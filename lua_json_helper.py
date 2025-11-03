@@ -18,7 +18,7 @@ import pathlib
 # %% FUNCTIONS
 
 def create_empty_auctiondb_lua_file(auctiondb_lua_file_path):
-    logger.debug(f"No TradeSkillMaster_AuctionDB.lua file in {auctiondb_lua_file_path}, creating it")
+    logger.debug(f"No TradeSkillMaster_AuctionDB.lua file in {redact_account_name_from_lua_file_path(auctiondb_lua_file_path)}, creating it")
     os.makedirs(auctiondb_lua_file_path, exist_ok=True)
     with open(os.path.join(auctiondb_lua_file_path, "TradeSkillMaster_AuctionDB.lua"), "w") as outfile:
         empty_db_str = 'AscensionTSM_AuctionDB = {\n	["profiles"] = {\n		'\
@@ -78,7 +78,7 @@ def get_lua_file_path_info(lua_file_paths, msg=""):
         logger.info(config.SEPARATOR)
         logger.critical("The following LUA file was NOT created by the official Ascension TSM Addon, skipping it.")
         for lua_file_path in new_luas_with_wrong_version:
-            logger.critical(f'{lua_file_path}')
+            logger.critical(f'{redact_account_name_from_lua_file_path(lua_file_path)}')
             config.LUAS_WITH_WRONG_VERSION.add(lua_file_path)
         logger.critical("Download the official Ascension TSM addon from the launcher")
         logger.critical("or from https://github.com/Ascension-Addons/TradeSkillMaster.")
