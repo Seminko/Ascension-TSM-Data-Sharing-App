@@ -166,7 +166,7 @@ def get_user_id_initial(unhashed_account_names, ):
 
 def get_user_id_input():
     discord_id = None
-    logger.info("Discord User ID is a 18-19 digit number (unique identifier). To get it, you have to enable")
+    logger.info("Discord User ID is a 17-19 digit number (unique identifier). To get it, you have to enable")
     logger.info("Developer mode in the discord app (cogwheel-advanced-developer mode), then right click")
     logger.info("your name and select Copy User ID. If you're not sure how to enable Developer mode,")
     logger.info(f"check Github readme ({GITHUB_REPO_URL}).")
@@ -242,10 +242,10 @@ def validate_discord_user_id(discord_user_id):
     if not isinstance(discord_user_id, str):
         discord_user_id = str(discord_user_id)
     if not discord_user_id.isnumeric():
-        logger.critical(f"Discord User ID '{discord_user_id}' is not numeric. It is supposed to be a 18-19 digit number.")
+        logger.critical(f"Discord User ID '{discord_user_id}' is not numeric. It is supposed to be a 17-19 digit number.")
         return False
-    if len(discord_user_id) not in [18, 19]:
-        logger.critical(f"Discord User ID '{discord_user_id}' is not of appropriate length. It is supposed to be a 18-19 digit number.")
+    if len(discord_user_id) not in [17, 18, 19]:
+        logger.critical(f"Discord User ID '{discord_user_id}' is not of appropriate length. It is supposed to be a 17-19 digit number.")
         return False
     logger.debug("Discord User ID validated")
     return True
