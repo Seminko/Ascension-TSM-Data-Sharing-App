@@ -133,6 +133,7 @@ def download_data(full_file_info):
         downloaded_data = server_communication.get_data_from_server(latest_scans_per_realm)
         if downloaded_data is None:
             logger.debug(f"Download failed. Will retry next round. ({current_tries['download_tries']}/{HTTP_TRY_CAP})")
+            downloaded_data = []
         elif len(downloaded_data) == 0:
             logger.debug("LUA file(s) are up-to-date for all realms")
         downloaded_data.sort(key=lambda x: x["realm"])
